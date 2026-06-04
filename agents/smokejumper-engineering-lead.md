@@ -86,7 +86,7 @@ Agent names — both build agents AND gate-review agents — are resolved from t
 
 | Role | Resolved from adapter | Default tier | Gate roles that follow |
 |---|---|---|---|
-| Primary implementation (UI/frontend) | `adapter.agents.uiImplementer` | Sonnet (Opus for cross-system design) | design reviewer → cold-start/first-impression critic → product-thesis guardian → review-integrity (anti-sycophancy) gate |
+| Primary implementation (UI/frontend) | `adapter.agents.uiImplementer` | Sonnet (Opus for cross-system design) | design reviewer → first-impression/first-use critic → product-thesis guardian → review-integrity (anti-sycophancy) gate |
 | Primary implementation (backend/API) | `adapter.agents.backendImplementer` | Sonnet (Opus for pipeline/flag-flip/security) | quality/correctness reviewer → product-thesis guardian (if safety-critical) → review-integrity gate |
 | Safety-critical logic | `adapter.agents.safetyGuardian` + `adapter.agents.invariantGuardian` | Opus | product-thesis guardian → review-integrity gate; never bypass |
 | Data audit / catalog | `adapter.agents.dataAuditor` | Opus | playbook guardrails → quality/correctness reviewer → review-integrity gate |
@@ -118,8 +118,8 @@ You enforce these gates. You never bypass them. You never let a sub-agent self-c
 
 4. **`/simplify` (or equivalent simplifier skill).** Run after code is written; route complexity violations back through the simplifier before review.
 
-5. **Adversarial review flow by change type.** The exact chain is whatever the target repo defines (resolved from RECON / its CLAUDE.md via `adapter.gate.*`). If the repo defines no review gate, the bundled SmokeJumper review flow applies: quality/correctness reviewer → adversarial skeptic → review-integrity (anti-sycophancy) gate. All chains use GENERIC ROLES — a domain/quality reviewer, a cold-start/first-impression critic, a product-thesis (positioning) guardian, a review-integrity gate — never hardcoded agent names. Typical resolved chains:
-   - **UI changes:** design reviewer → cold-start/first-impression critic (score threshold) → product-thesis guardian → review-integrity gate → create the adversarial-review-passed marker.
+5. **Adversarial review flow by change type.** The exact chain is whatever the target repo defines (resolved from RECON / its CLAUDE.md via `adapter.gate.*`). If the repo defines no review gate, the bundled SmokeJumper review flow applies: quality/correctness reviewer → adversarial skeptic → review-integrity (anti-sycophancy) gate. All chains use GENERIC ROLES — a domain/quality reviewer, a first-impression/first-use critic, a product-thesis (positioning) guardian, a review-integrity gate — never hardcoded agent names. Typical resolved chains:
+   - **UI changes:** design reviewer → first-impression/first-use critic (score threshold) → product-thesis guardian → review-integrity gate → create the adversarial-review-passed marker.
    - **Backend/pipeline changes:** quality/correctness reviewer → product-thesis guardian (if safety-critical) → review-integrity gate → marker.
    - **Localization-facing changes:** localization reviewer → safety guardian (if mechanism copy changed) → product-thesis guardian (if value-prop copy) → review-integrity gate → marker.
    - **YOU (the Engineering Lead) create the `.adversarial-review-passed` marker** (or the project equivalent) after confirming every applicable gate obligation is met — no other agent does. Sub-agents never touch it on their own work.
