@@ -18,6 +18,15 @@ Before doing any file scanning, load prior knowledge:
    equivalent). Capture what the product IS in one sentence.
 4. **Check the issue tracker** if one is present: `bd ready` (beads), or a `TODO.md`, or
    open GitHub issues. Note any unresolved blockers or in-flight work that could conflict.
+5. **Detect concurrent sessions (shared-working-tree hazard).** Before committing to the
+   target's working tree, check for signs that another agent/session is editing it
+   concurrently: a dirty index with files you did not stage, the branch HEAD advancing with
+   commits you did not author, recently-modified files, or running background loops. If
+   detected, **isolate this sprint in a dedicated git worktree** (`git worktree add`) rather
+   than sharing the live tree — otherwise INTEGRATE will entangle another session's commits
+   into your branch and freshness/staleness pre-commit guards (e.g. a "docs are N commits
+   behind" guard) can block your commits for reasons unrelated to your change. Record the
+   finding under `## Known traps`.
 
 ---
 
