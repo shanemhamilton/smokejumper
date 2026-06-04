@@ -140,8 +140,10 @@ agents/
 skills/smokejumper/
   SKILL.md               # 8-phase orchestrator (the /smokejumper entry point)
   references/            # adapter, recon, gated-pour, self-healing, schema, lessons-learned
+  agents/openai.yaml     # Codex skill-discovery metadata
   scripts/
     sj-init.sh           # scaffolds <target>/.smokejumper/ (idempotent)
+    sj-version-check.sh  # non-blocking update check, run at sprint start
 docs/specs/              # design spec
 CHANGELOG.md
 VERSION
