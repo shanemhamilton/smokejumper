@@ -1,0 +1,4 @@
+interface:
+  display_name: "SmokeJumper"
+  short_description: "Autonomous product-development sprint in any repo"
+  default_prompt: "Use $smokejumper to run a sprint — assess this repo, decide the highest-leverage move, build it through Claude+Codex agents, gate every push through adversarial review, and hand off."

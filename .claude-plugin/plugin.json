@@ -1,10 +1,10 @@
 {
   "name": "smokejumper",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Drop-in autonomous product-development crew — lands cold in any repo, assesses, decides the highest-leverage move, executes via Claude+Codex agents and multi-day Ralph pours, gates every push through adversarial review, and compounds its own intelligence each deployment.",
   "author": { "name": "Shane Hamilton" },
   "homepage": "https://github.com/shanemhamilton/smokejumper",
   "repository": "https://github.com/shanemhamilton/smokejumper",
   "license": "MIT",
-  "keywords": ["orchestration", "agents", "autonomous", "ralph", "codex", "adversarial-review", "product-development", "portable"]
+  "keywords": ["orchestration", "agents", "autonomous", "ralph", "codex", "claude-code", "adversarial-review", "product-development", "portable"]
 }

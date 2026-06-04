@@ -4,6 +4,16 @@ All notable changes to SmokeJumper are documented here. Format: [Keep a Changelo
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-04
+### Added
+- **Codex runtime support.** SmokeJumper installs in OpenAI Codex CLI from the same `.claude-plugin/marketplace.json` it uses for Claude Code — verified against `codex plugin marketplace add` (Codex 0.130). README now documents install for both runtimes.
+- **Codex skill-discovery metadata** (`skills/smokejumper/agents/openai.yaml`): `display_name`, `short_description`, and `default_prompt` for Codex's plugin UI, mirroring the convention used by sibling dual-runtime skills.
+
+### Changed
+- **Marketplace renamed `smokejumper-local` → `smokejumper`** (`.claude-plugin/marketplace.json`). The manifest name is the registered marketplace name in both runtimes, so the GitHub install is now consistently `smokejumper@smokejumper` (the previous `smokejumper@smokejumper-local` in the README's "Latest" path never matched the manifest). Local and GitHub installs differ only by the `marketplace add` source.
+- **Generalized the engineering-lead's dispatch wording** (`agents/smokejumper-engineering-lead.md`): "Team Mode / Task Mode" is now framed as runtime-neutral parallel-vs-sequential dispatch, with Claude Code's Team Mode and Codex's `codex exec` named as examples rather than requirements. Sibling-skill references in `SKILL.md` already degrade gracefully, so no functional change was needed there.
+- Added `claude-code` to plugin keywords.
+
 ## [0.3.0] - 2026-06-04
 ### Added
 - **Contributor write-back path in LESSONS LEARNED** (`skills/smokejumper/SKILL.md`, `references/lessons-learned.md`). Phase 7's framework write-back now branches on whether the sprint runs inside the canonical plugin repo. Inside it, portable improvements are committed directly (existing behavior, now "Mode A"). Anywhere else — the common case, where the plugin is installed rather than a pushable git checkout — the improvement is generalized, **scrubbed of all target-repo specifics**, and the user is encouraged to open an upstream pull request so every deployment benefits ("Mode B"). Mode B never auto-forks, auto-commits, or auto-opens a PR: it prepares the materials and hands over the commands. Adds the `plugin_pr_suggested` sprint-log event.
