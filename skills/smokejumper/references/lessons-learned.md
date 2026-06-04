@@ -45,6 +45,9 @@ If a Lane A pour ran this sprint, use `choo-choo-ralph:harvest` (or equivalent) 
 collect learnings from completed children before writing the lessons-learned section.
 Do not reconstruct learnings from memory — harvest from the actual completed work items.
 
+If no async loop tool is available (a Lane-B-only sprint), synthesize learnings directly
+from `sprint-log.jsonl` and the session instead of `choo-choo-ralph:harvest`.
+
 ### Commit discipline
 
 Update `repo-knowledge.md` as a commit in the target repo — not as a standalone cleanup

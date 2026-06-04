@@ -47,10 +47,13 @@ coverage config, test threshold files. If safety-critical logic is present (auth
 payments, health/safety verdicts, crypto), note its location with one line — e.g.,
 `payments: src/billing/charge.ts`. This is a location note, not a security audit.
 
-**`## Lead mapping`** (populated by the adapter scan — see `adapter.md`):
-- Project-specific lead agents found (engineering, design, product, etc.)
-- Project-specific gate/review roles found
-- Bundled fallbacks that will substitute
+**`## Lead & gate mapping`** (populated by the adapter scan — see `adapter.md`):
+- Project-specific lead + implementation agents found (`adapter.agents.*`)
+- Project-specific gate/review roles found (`adapter.gate.*`)
+- Bundled fallbacks that will substitute (and any safety-guardian gap routed to the human)
+
+**`## Model tier`** (populated by the adapter scan):
+- Resolved `adapter.model.*` — default tier, escalation tier, model floor
 
 **`## Capabilities`** (populated by the adapter scan):
 - Async loop tool (choo-choo-ralph or equivalent): present / absent
@@ -84,8 +87,8 @@ Read broadly but record concisely. You are modeling, not auditing.
 5. **Read the CI/CD config** (`.github/workflows/`, `Makefile`, `cloudbuild.yaml`, etc.)
    to confirm the build + test + deploy pipeline. Extract the commands; note any
    environment variable requirements.
-6. **Run the adapter scan** per `adapter.md`. Record results in `## Lead mapping` and
-   `## Capabilities`.
+6. **Run the adapter scan** per `adapter.md`. Record results in `## Lead & gate mapping`,
+   `## Model tier`, and `## Capabilities`.
 7. **Stop when you can answer these questions without looking anything up:**
    - What is this product?
    - What language / runtime?

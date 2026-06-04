@@ -37,8 +37,12 @@ One Markdown file. Updated in place each sprint (never replaced wholesale). Stru
 ## Gate locations
 # CI file paths, pre-commit hooks, coverage config, safety-critical logic locations
 
-## Lead mapping
-# resolved lead agents for most recent sprint (project-specific or bundled fallback)
+## Lead & gate mapping
+# resolved lead agents, implementation agents (adapter.agents.*), and gate-role agents
+# (adapter.gate.*) for most recent sprint (project-specific or bundled fallback; null = skip/human)
+
+## Model tier
+# resolved adapter.model.* — default tier, escalation tier, model floor (from CLAUDE.md)
 
 ## Capabilities
 # async loop tool: present/absent, Codex CLI: present/absent, issue tracker: type + commands

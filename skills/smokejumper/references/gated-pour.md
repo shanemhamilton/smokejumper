@@ -29,10 +29,10 @@ unit. No async loop tool required.
 
 ---
 
-## The front-loaded gate rule
+## The front-loaded Plan Review Gate
 
-The Plan Review Gate runs BEFORE any pour is authorized. It is a heavyweight adversarial
-review of the sprint plan that covers every unit about to be poured.
+The front-loaded Plan Review Gate runs BEFORE any pour is authorized. It is a heavyweight
+adversarial review of the sprint plan that covers every unit about to be poured.
 
 This gate is relocated to the design and plan phase — not to each child, not to the
 molecule's close. It authorizes the entire pour by vetting scope, sequencing, safety
@@ -60,9 +60,10 @@ mechanical gates:
 - Design-reviewer gate
 - Product-thesis gate
 
-**Milestone spot-check (mandatory):** After every N children complete (default: 25% of
-molecule), the engineering lead samples completed work for quality drift. If drift is
-found, the pour is paused and a Lane-B correction unit is dispatched before resuming.
+**Milestone spot-check (mandatory):** After every ~25% of molecule children complete
+(the trigger cadence), the engineering lead SAMPLES 10–20% of the newly-completed children
+(the sample size) for quality drift. If drift is found, the pour is paused and a Lane-B
+correction unit is dispatched before resuming.
 
 ---
 
