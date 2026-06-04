@@ -45,6 +45,37 @@ adversarial review flow). The marker is never created before the gate passes.
 
 ---
 
+## Pouring and launching a Lane A molecule (mechanics)
+
+Authoring a molecule is not enough — it must be **claimable by the loop runner**, or the
+loop starts, finds nothing, and exits "No ready work available." Two requirements:
+
+1. **Assign every poured molecule to the loop's worker identity.** choo-choo-ralph's
+   `ralph.sh` claims root molecules via `bd list --status=open --assignee=ralph`. A molecule
+   poured without `--assignee ralph` is invisible to the loop. ALWAYS pass `--assignee ralph`
+   (or the worker identity the loop script greps for — verify by reading the loop script).
+2. **Produce a real formula molecule, not plain child beads.** Plain children have no
+   formula steps for the loop to navigate. Use the tracker's template/formula lifecycle.
+   This is **version-dependent** — verify the exact commands against the installed tooling.
+   For example, some `bd` versions pour a formula by name (`bd mol pour <formula> --var …`),
+   while others require cooking first (`bd cook <formula> --persist` → `bd mol pour <proto> --var …`).
+   Read `bd mol pour --help` / `bd cook --help` rather than assuming.
+
+**Mandatory pre-launch verification (the check that prevents a silent no-op loop):**
+Before `nohup ./ralph.sh &`, confirm the molecules are claimable:
+```
+bd list --status=open --assignee=ralph    # MUST list the poured root molecules
+bd ready --parent <root-mol-id>           # MUST surface the molecule's first child step
+```
+If the first returns nothing, the pour is not assigned correctly — fix it before launching.
+
+**Claim vs navigate (do not confuse them):** the loop claims a *root* molecule with
+`--assignee=ralph`, then navigates *inside* it with `bd ready --parent <root-mol-id>`.
+`bd ready --assignee=ralph` (global) does NOT surface formula child steps — never drive the
+loop with it.
+
+---
+
 ## Lane A gate model (per-child)
 
 After the front-loaded Plan Review Gate authorizes the pour, each Lane A child runs ONLY
