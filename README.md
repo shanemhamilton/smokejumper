@@ -50,6 +50,23 @@ Starts a full sprint. SmokeJumper proceeds through all eight phases autonomously
 
 Full design: [`docs/specs/2026-06-04-smokejumper-framework-design.md`](docs/specs/2026-06-04-smokejumper-framework-design.md)
 
+```mermaid
+flowchart TD
+    R["RECON<br/>build repo model"] --> D["DECIDE<br/>highest-leverage move"]
+    D --> P{"PLAN<br/>adversarial gate"}
+    P -- BLOCK --> D
+    P -- PASS --> E["EXECUTE"]
+    E --> LA["Lane A<br/>async big pour"]
+    E --> LB["Lane B<br/>synchronous crew"]
+    LA --> RV["REVIEW"]
+    LB --> RV
+    RV --> I["INTEGRATE<br/>commit + push"]
+    I --> LL["LESSONS LEARNED"]
+    LL --> H["HANDOFF"]
+    LL -. write-back .-> RK[("target repo<br/>repo-knowledge.md")]
+    LL -. write-back .-> FW[("plugin repo<br/>VERSION + CHANGELOG")]
+```
+
 1. **RECON** — Build a repo model: stack, conventions, gate locations, available tools, and any prior sprint knowledge from `.smokejumper/repo-knowledge.md`.
 2. **DECIDE** — The detected leads choose the highest-leverage next move. No fixed pipeline; they assess the actual state of the product and pick.
 3. **PLAN** *(front-loaded adversarial gate)* — Design + implementation plan produced, then put through the full adversarial review. PASS here authorizes execution — including any autonomous pour. Bad assumptions and unsafe decompositions are caught here, before hours of coding.
@@ -114,6 +131,11 @@ VERSION
 
 ---
 
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) — validate with `claude plugin validate .`, bump
+`VERSION` + `plugin.json` together per SemVer, and record changes in `CHANGELOG.md`.
+
 ## License
 
-MIT
+[MIT](LICENSE) © Shane Hamilton
