@@ -4,6 +4,10 @@ All notable changes to SmokeJumper are documented here. Format: [Keep a Changelo
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-04
+### Added
+- **Update check at sprint start** (`skills/smokejumper/scripts/sj-version-check.sh`, wired into `SKILL.md`'s "Before You Start"). The first action of every sprint compares the installed `VERSION` against the latest published GitHub release and, if behind, prints a one-line notice with the per-runtime upgrade command (`claude`/`codex plugin marketplace upgrade smokejumper`). Notify-only — it never auto-applies an upgrade and never gates the sprint. Fail-silent and time-boxed (5s): missing `curl`, no network, API errors, or rate limits produce no output, so a sprint never stalls on the check.
+
 ## [0.4.0] - 2026-06-04
 ### Added
 - **Codex runtime support.** SmokeJumper installs in OpenAI Codex CLI from the same `.claude-plugin/marketplace.json` it uses for Claude Code — verified against `codex plugin marketplace add` (Codex 0.130). README now documents install for both runtimes.

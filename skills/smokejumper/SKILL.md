@@ -19,6 +19,12 @@ plugin itself).
 
 ## Before You Start
 
+**Update check (non-blocking):** As the first action, run `scripts/sj-version-check.sh`.
+If it prints an update notice, relay it to the user once, then continue the sprint — it is
+informational, never a gate. The script is fail-silent: no network, no `curl`, or an API
+error produces no output. Do not run an upgrade yourself; surface the command and let the
+user decide.
+
 **Checklist:** Create one tracker item per phase in the detected issue tracker and work
 them in order. If no issue tracker is present, track phases in
 `<target>/.smokejumper/sprint-log.jsonl` (the durable state file) rather than an ephemeral
