@@ -69,7 +69,25 @@ one entry that passes the portability test:
 All three must be YES. If any is NO, the finding stays in the target repo's
 `repo-knowledge.md` as a project-specific trap — it does not graduate to the plugin.
 
-### Plugin write-back procedure
+### Determine the write-back mode
+
+The portability test decides *whether* an improvement should reach the plugin. The mode
+decides *how* — and it turns on whether this sprint is running inside the canonical plugin
+repo or inside some other target repo that merely has the plugin installed.
+
+- **Mode A — maintainer (direct commit).** The current working tree is a git checkout of
+  the canonical plugin repo: a remote matches `plugin.json.repository` and a push to it
+  would succeed. Commit the improvement directly (Mode A procedure below).
+- **Mode B — contributor (prepare an upstream PR).** Anything else — most commonly the
+  plugin is installed as a read-only package and is not a pushable checkout at all. The
+  improvement cannot be committed here. Prepare it for contribution and **encourage the
+  user to open a pull request** to the canonical repo, so every other deployment benefits
+  from the learning.
+
+When in doubt, use Mode B. Encouraging an upstream contribution is always safe; committing
+to a repo you don't own is not.
+
+### Mode A procedure — direct commit (maintainer)
 
 1. **Read `## Framework improvements pending`** in `repo-knowledge.md`.
 2. **For each portable entry**, determine the improvement type:
@@ -95,6 +113,42 @@ All three must be YES. If any is NO, the finding stays in the target repo's
 7. **Clear `## Framework improvements pending`** in `repo-knowledge.md` after the
    successful plugin commit. The next sprint starts with an empty queue.
 8. **Emit `plugin_bump_committed` event** to `sprint-log.jsonl`.
+
+### Mode B procedure — prepare an upstream PR (contributor)
+
+Mode B never auto-forks, auto-commits, or auto-opens a PR. A fork creates a public repo
+under the user's account and a PR publishes the learning — both are outward-facing acts the
+human must trigger. The orchestrator prepares the materials and hands over ready-to-run
+commands; the user decides whether to send them.
+
+1. **Generalize AND scrub — mandatory before anything leaves the machine.** The portability
+   test already confirmed the insight applies elsewhere; this step confirms the *text* is
+   safe to publish. Rewrite the improvement so it carries zero target-repo specifics: no
+   repo or product names, file paths, domain/business logic, identifiers, credentials, or
+   internal URLs. If a finding can't be expressed generically without leaking, it does not
+   graduate — keep it local. When the target repo is private or proprietary, treat this as a
+   hard gate.
+2. **Prepare the change** in generalized form — the new agent file content, the reference
+   edit, or the SKILL.md edit — as a diff or a precisely described patch. Do not apply it to
+   any repo you can't push to.
+3. **Stage a CHANGELOG entry; do not bump VERSION.** The contribution adds an entry under
+   `## Unreleased` describing the learning. The maintainer assigns the version at merge —
+   external PRs never bump `VERSION` or `plugin.json`.
+4. **Hand the user ready-to-run contribution steps.** Resolve the upstream URL from
+   `plugin.json.repository` (never hardcode it). Provide both paths:
+   - With the GitHub CLI:
+     ```
+     gh repo fork <plugin.json.repository> --clone
+     # apply the prepared change on a new branch, commit, then:
+     gh pr create --title "<learning>" --body "<why it is portable>"
+     ```
+   - Without `gh`: fork via the repository's web page, push the branch to the fork, and open
+     the PR from the GitHub UI.
+5. **Record locally regardless.** Keep the improvement in
+   `<target>/.smokejumper/repo-knowledge.md` under `## Framework improvements pending` so it
+   survives if the user declines, and surface the PR suggestion in the HANDOFF. Contribution
+   is encouraged, never forced — a user in a private context may decline, and that is fine.
+6. **Emit `plugin_pr_suggested` event** to `sprint-log.jsonl`.
 
 ---
 
@@ -122,7 +176,9 @@ Emit these events to `sprint-log.jsonl` during LESSONS LEARNED:
 - `lessons_written` — when `repo-knowledge.md` is updated
 - `plugin_bump_queued` — when a portable improvement is identified but not yet committed
   (e.g., if the plugin write-back is deferred to the next sprint)
-- `plugin_bump_committed` — when the plugin repo commit succeeds
+- `plugin_bump_committed` — when the plugin repo commit succeeds (Mode A)
+- `plugin_pr_suggested` — when a generalized improvement is prepared and an upstream PR is
+  encouraged because this sprint isn't running in the canonical plugin repo (Mode B)
 
 ---
 

@@ -4,6 +4,11 @@ All notable changes to SmokeJumper are documented here. Format: [Keep a Changelo
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-04
+### Added
+- **Contributor write-back path in LESSONS LEARNED** (`skills/smokejumper/SKILL.md`, `references/lessons-learned.md`). Phase 7's framework write-back now branches on whether the sprint runs inside the canonical plugin repo. Inside it, portable improvements are committed directly (existing behavior, now "Mode A"). Anywhere else — the common case, where the plugin is installed rather than a pushable git checkout — the improvement is generalized, **scrubbed of all target-repo specifics**, and the user is encouraged to open an upstream pull request so every deployment benefits ("Mode B"). Mode B never auto-forks, auto-commits, or auto-opens a PR: it prepares the materials and hands over the commands. Adds the `plugin_pr_suggested` sprint-log event.
+- **`CONTRIBUTING.md` learnings-contribution guidance**: how to generalize/scrub and open a learning PR, plus the rule that external PRs add an `## Unreleased` entry rather than bumping `VERSION` (the maintainer assigns the version at merge).
+
 ## [0.2.0] - 2026-06-04
 ### Added
 - **Concurrent-session detection in RECON** (`references/recon.md`). Deployment #1 (MySkinIQ) ran in a shared working tree where parallel Claude sessions advanced the branch and tripped a "docs N commits stale" pre-commit guard, blocking the sprint's own commits and entangling another session's commit into the branch. RECON now detects concurrent-session signals (unstaged files you didn't touch, unauthored HEAD advancement, running loops) and isolates the sprint in a dedicated `git worktree` before INTEGRATE.
