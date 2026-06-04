@@ -299,25 +299,36 @@ For Lane A, use `choo-choo-ralph:harvest` (if present) to harvest learnings from
 completed molecule children before synthesizing. The orchestrator also synthesizes
 synchronous-lane learnings.
 
-**(b) Framework versioned improvement (when a portable improvement surfaced).** If the
-sprint revealed a portable fix — a better recon heuristic, a lifecycle gap, a roster gap
-worth bundling, a reference file improvement — make a **versioned commit to the SmokeJumper
-plugin repo**: bump `VERSION` and `plugin.json` per SemVer (MAJOR breaking, MINOR
-features, PATCH fixes), add a `CHANGELOG.md` entry naming the deployment, optionally
-`claude plugin tag`. Record the version bump in `sprint-log.jsonl`.
+**(b) Framework improvement (when a portable improvement surfaced).** If the sprint
+revealed a portable fix — a better recon heuristic, a lifecycle gap, a roster gap worth
+bundling, a reference file improvement — the write-back *mode* depends on where this sprint
+is running (`references/lessons-learned.md` has the full procedure for both):
 
-If a portable improvement was identified but the plugin-repo (Repo A) version bump/commit
-can't complete (no remote, tag conflict, etc.), record the intended improvement in
-`<target>/.smokejumper/repo-knowledge.md` under a "Framework improvements pending" note and
-surface it in the handoff — never leave the sprint half-finished.
+- **Inside the canonical plugin repo** (a remote matches `plugin.json.repository` and a push
+  would succeed) → **versioned commit**: bump `VERSION` and `plugin.json` per SemVer (MAJOR
+  breaking, MINOR features, PATCH fixes), add a `CHANGELOG.md` entry naming the deployment,
+  optionally `claude plugin tag`. Record the bump in `sprint-log.jsonl`.
+- **Anywhere else** (the common case — the plugin is installed, not a pushable checkout) →
+  the improvement can't be committed here. **Generalize and scrub it of every target-repo
+  specific** (names, paths, business logic, secrets), then **encourage the user to open a
+  pull request** to `plugin.json.repository` so every other deployment benefits. Never
+  auto-fork or auto-PR — prepare the materials and hand over the commands; the user pulls
+  the trigger.
+
+Either way, if the write-back can't complete (no remote, tag conflict, or the user declines
+the PR), record the improvement in `<target>/.smokejumper/repo-knowledge.md` under
+"Framework improvements pending" and surface it in the handoff — never leave the sprint
+half-finished.
 
 If no portable improvement surfaced, record that stream as N/A in `sprint-log.jsonl`.
 
-"The crew gets better every drop" = a plugin version bump with a CHANGELOG entry, never
-a mutation of loose files.
+"The crew gets better every drop" — directly when SmokeJumper runs on itself, and through
+contributed PRs when it runs anywhere else.
 
 **Exit condition:** (a) `repo-knowledge.md` enriched and committed to the target repo.
-(b) Plugin repo has a versioned commit — or N/A is explicitly recorded.
+(b) The portable improvement is either committed (canonical repo), prepared with an
+upstream-PR suggestion surfaced in the handoff (anywhere else), or N/A is explicitly
+recorded.
 
 ---
 
