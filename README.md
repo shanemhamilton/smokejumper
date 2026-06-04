@@ -1,34 +1,52 @@
 # SmokeJumper
 
-A drop-in, autonomous product-development crew packaged as a standalone Claude Code plugin.
+A drop-in, autonomous product-development crew packaged as a standalone plugin for Claude Code and Codex.
 
 SmokeJumper lands cold in any repo, builds a model of what exists, decides the highest-leverage next move itself, executes via a mix of Claude agents and Codex, gates every push through an adversarial review, and runs a lessons-learned pass at the end — enriching both the target repo's own knowledge store and the plugin itself. Two things compound per deployment: the repo gets better, and the crew gets sharper.
 
 ---
 
-## Install
+SmokeJumper installs from the **same plugin manifest** in both runtimes — Claude Code and
+Codex share the `SKILL.md` + `agents/` + `.claude-plugin/marketplace.json` format.
 
-### Latest (from GitHub)
+### Claude Code
+
+From GitHub:
 
 ```bash
 claude plugin marketplace add https://github.com/shanemhamilton/smokejumper
 claude plugin install smokejumper@smokejumper
 ```
 
-### Local / pinned
+Or from a local checkout (swap the marketplace source):
 
 ```bash
 claude plugin marketplace add ~/Documents/SmokeJumper
-claude plugin install smokejumper@smokejumper-local
+claude plugin install smokejumper@smokejumper
 ```
 
-To validate before installing:
+### Codex
+
+```bash
+codex plugin marketplace add shanemhamilton/smokejumper
+```
+
+Then install the `smokejumper` plugin from within Codex (its `skill-installer` handles
+enablement). For a local checkout, point the marketplace at the directory instead:
+
+```bash
+codex plugin marketplace add ~/Documents/SmokeJumper
+```
+
+### Validate / release (Claude Code)
+
+Validate before installing:
 
 ```bash
 claude plugin validate ~/Documents/SmokeJumper
 ```
 
-To cut a versioned release tag:
+Cut a versioned release tag:
 
 ```bash
 claude plugin tag ~/Documents/SmokeJumper
