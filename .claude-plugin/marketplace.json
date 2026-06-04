@@ -1,0 +1,16 @@
+{
+  "name": "smokejumper-local",
+  "owner": { "name": "Shane Hamilton" },
+  "metadata": {
+    "description": "Local marketplace for the SmokeJumper plugin",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "smokejumper",
+      "source": "./",
+      "description": "Drop-in autonomous product-development crew.",
+      "version": "0.1.0"
+    }
+  ]
+}
