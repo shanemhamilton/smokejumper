@@ -19,10 +19,11 @@ plugin itself).
 
 ## Before You Start
 
-**Checklist:** Create one tracker item per phase in the detected issue tracker (fall back
-to the session todo list if no tracker is present) and work them in order. Close each
-item when its exit condition is satisfied. Do not advance to the next phase until the
-current one's exit condition is met.
+**Checklist:** Create one tracker item per phase in the detected issue tracker and work
+them in order. If no issue tracker is present, track phases in
+`<target>/.smokejumper/sprint-log.jsonl` (the durable state file) rather than an ephemeral
+list. Close each item when its exit condition is satisfied. Do not advance to the next
+phase until the current one's exit condition is met.
 
 **State durability:** All progress and phase decisions append to
 `<target>/.smokejumper/sprint-log.jsonl` in real time. If context is compacted or the
@@ -87,7 +88,8 @@ git discipline + design system location + coverage thresholds all documented. If
 
 The detected (or generic bundled) leads autonomously choose the highest-leverage next move
 for the product. The product lead drives this phase. Inputs: RECON's repo model, the
-product docs, the issue tracker, and `repo-knowledge.md`.
+product docs, the issue tracker, and `repo-knowledge.md`. If no product docs exist, infer
+product direction from RECON's architectural model, the README, and the issue tracker.
 
 **Autonomy scope:** The leads decide *what to build*, in what order, and why. Escalate to
 the human **only** for product strategy / budget / release authority — per the
@@ -114,11 +116,17 @@ lane signal recorded in `sprint-log.jsonl`.
 
 *(No reference file — PLAN runs the adversarial flow on the design and plan.)*
 
+First, ensure no stale `.adversarial-review-passed` marker exists from a prior sprint — if
+one is present, delete it. The marker may ONLY be created by THIS sprint's gate after it
+passes. Never treat a pre-existing marker as authorization.
+
 The leads produce the design and implementation plan:
 
 - The design lead produces design direction, flows, component patterns, states, and
   microcopy (for user-facing work). Reads the detected design system before touching
-  anything — never invents tokens or hue values.
+  anything — never invents tokens or hue values. If RECON found no design system, the
+  design lead documents what baseline it is establishing and records it as a new
+  design-system artifact.
 - The product lead produces the feature spec (problem, goals, non-goals, requirements,
   tracking plan, acceptance criteria, kill condition).
 - The engineering lead decomposes the work into units and assigns each unit a lane and
@@ -143,8 +151,9 @@ Biased toward momentum: the gate catches bad assumptions and unsafe decompositio
 not re-architect vetted work.
 
 **Exit condition:** Plan PASSED the adversarial gate for both the design and the
-implementation plan. All work units have lane + safety-flag assignments. `sprint-log.jsonl`
-records gate outcomes.
+implementation plan. All work units have lane + safety-flag assignments. The gate verdict
+(PASS, with which reviewers) is appended to `<target>/.smokejumper/sprint-log.jsonl` before
+advancing to EXECUTE.
 
 ---
 
@@ -193,8 +202,9 @@ graduation to the plugin is a deliberate LESSONS LEARNED decision.
 **Execution framework selection:** If the RECON detected more than one synchronous
 execution framework (e.g., a heavier orchestrated framework and a lighter execution-skills
 framework), **ask the human which to use** before dispatching Lane B work. State the
-tradeoff (more thorough, more tokens, full quality gates vs. faster, lighter-weight). If
-only one is detected, use it. If none is detected, use direct dispatch. Never auto-select.
+tradeoff (heavier orchestration = more thorough + more tokens + full gates; lighter
+execution = faster + fewer gates). If only one framework is present, use it; if none,
+direct dispatch. Never auto-select.
 
 **Model tier:** Follow `adapter.model.*` (detected in RECON). Sonnet is the minimum floor
 for all Claude work — applies in Claude Code sessions and in any Anthropic API calls the
@@ -231,7 +241,9 @@ or sub-agent creates it for their own work.
 Each formula child must pass: tests green, build passes, type-check/lint clean, coverage
 at or above thresholds. A child that cannot pass parks for the next loop or files a
 blocker issue in the detected tracker. The heavy adversarial review was already spent at
-the front-loaded Plan gate in Phase 3 — it is not re-run per child.
+the front-loaded Plan gate in Phase 3 — it is not re-run per child. For a poured molecule,
+the `.adversarial-review-passed` authorization is established ONCE at plan-time (Phase 3),
+not per child; Lane A children run only their mechanical gates.
 
 **Milestone spot-check:**
 
@@ -294,6 +306,11 @@ plugin repo**: bump `VERSION` and `plugin.json` per SemVer (MAJOR breaking, MINO
 features, PATCH fixes), add a `CHANGELOG.md` entry naming the deployment, optionally
 `claude plugin tag`. Record the version bump in `sprint-log.jsonl`.
 
+If a portable improvement was identified but the plugin-repo (Repo A) version bump/commit
+can't complete (no remote, tag conflict, etc.), record the intended improvement in
+`<target>/.smokejumper/repo-knowledge.md` under a "Framework improvements pending" note and
+surface it in the handoff — never leave the sprint half-finished.
+
 If no portable improvement surfaced, record that stream as N/A in `sprint-log.jsonl`.
 
 "The crew gets better every drop" = a plugin version bump with a CHANGELOG entry, never
@@ -309,7 +326,10 @@ a mutation of loose files.
 *(No reference file — HANDOFF invokes `anthropic-skills:handoff-prompt`.)*
 
 Invoke `anthropic-skills:handoff-prompt` to produce a high-fidelity handoff so the next
-session resumes with zero lost context and no hallucinated state.
+session resumes with zero lost context and no hallucinated state. If
+`anthropic-skills:handoff-prompt` is not installed, write an equivalent handoff document to
+`<target>/.smokejumper/HANDOFF.md` covering the same content (state, running loops, next
+steps).
 
 **If Lane A loops are still running**, the handoff explicitly carries the running loops:
 
