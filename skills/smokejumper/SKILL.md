@@ -86,7 +86,10 @@ orchestrator drives the sprint). It also scaffolds `<target>/.smokejumper/`, so 
   any model floor). Record as `adapter.model.*`.
 - Detect git discipline: submodule layout, branch conventions, merge policy (CI-enforced
   vs. local-green + admin-merge), merge command.
-- Detect design system source of truth: token file, component library, style guide.
+- Detect design-system source-of-truth **candidate paths** → `adapter.designSystem` (token/theme
+  files, Tailwind config, Storybook, `DESIGN.md`). These are hints; the design lead does the
+  authoritative search and writes the durable `## Design system` section in `repo-knowledge.md`
+  (which RECON loads on later sprints). The scan never writes that section.
 - Detect available design skills/plugins → `adapter.skills.design.*` (review, consult, a11y,
   frontend), and derive a windowed `functionalHealth` → `designPosture` (`adapter.health.*`),
   emitting a `design_posture_set` event. RECON may adjust the derived health one level for live
@@ -118,9 +121,10 @@ docs, and the adapter scan output.
 
 **Exit condition:** Compact repo model recorded + detected lead mapping (project-specific
 vs. generic bundled) + `adapter.gate.*` + `adapter.capabilities.*` + `adapter.model.*` +
-git discipline + design system location + coverage thresholds all documented. `adapter.skills.design.*`
-+ `functionalHealth` / `designPosture` are recorded under `## Capabilities` and a
-`design_posture_set` event is in `sprint-log.jsonl`. **The leads are established (resolved
+git discipline + design-system candidates (`adapter.designSystem`) + coverage thresholds all
+documented. `adapter.skills.design.*` + `functionalHealth` / `designPosture` are recorded under
+`## Capabilities` and a `design_posture_set` event is in `sprint-log.jsonl`. Any prior
+`## Design system` section is loaded for the design lead to verify/update when it runs. **The leads are established (resolved
 definitions read/adopted), the "Leads established" banner was surfaced, and a `leads_established`
 event is in `sprint-log.jsonl`. A product-context artifact exists (read in Context mode or
 bootstrapped in Setup mode) and its path is recorded under `## Capabilities`.** If

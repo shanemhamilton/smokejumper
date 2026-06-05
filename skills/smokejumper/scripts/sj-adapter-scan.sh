@@ -220,6 +220,29 @@ for pair in "review:$D_REVIEW" "consult:$D_CONSULT" "a11y:$D_A11Y" "frontend:$D_
   else emit RECON capability_absent "design skill $k: none (proceed analytically)"; fi
 done
 
+# --- Design system source detection (candidate paths only) -------------------------------
+# A cheap, bounded hint pass over the TARGET repo so design-system candidates are visible in the
+# banner and ## Capabilities. The DESIGN LEAD does the authoritative search + interpretation and
+# writes the durable ## Design system section in repo-knowledge.md — this script never writes it.
+DS_CANDIDATES="$(
+  find "$TARGET" -maxdepth 4 \
+    \( -name node_modules -o -name .git -o -name build -o -name dist -o -name .next \
+       -o -name Pods -o -name vendor -o -name .smokejumper \) -prune -o \
+    -type f \( \
+      -iname 'tailwind.config.*' -o -iname 'DESIGN.md' -o -iname 'STYLEGUIDE.md' \
+      -o -iname 'tokens.*' -o -iname '*.tokens.json' -o -iname 'theme.ts' -o -iname 'theme.css' \
+      -o -iname 'Theme.swift' -o -iname 'DesignSystem*.swift' -o -iname 'Color.kt' -o -iname 'Type.kt' \
+    \) -print 2>/dev/null | head -8 | sed "s#^$TARGET/##" | paste -sd, - || true
+)"
+for d in ".storybook" "design-system" "docs/design"; do
+  [ -d "$TARGET/$d" ] && DS_CANDIDATES="${DS_CANDIDATES:+$DS_CANDIDATES,}$d/"
+done
+if [ -n "$DS_CANDIDATES" ]; then
+  emit RECON capability_detected "design system candidates: $DS_CANDIDATES"
+else
+  emit RECON capability_absent "design system: none detected (design lead establishes baseline)"
+fi
+
 # --- Windowed functional health → design posture -----------------------------------------
 # Scope failure counts to the last 2 DISTINCT prior sprints (exclude the current $SPRINT, which
 # has no outcomes yet at RECON). A cumulative all-time count could never recover — the whole
@@ -307,6 +330,7 @@ CAPABILITIES="$(cat <<EOF
 - adapter.skills.design.consult: ${D_CONSULT:-null}
 - adapter.skills.design.a11y: ${D_A11Y:-null}
 - adapter.skills.design.frontend: ${D_FRONTEND:-null}
+- adapter.designSystem: ${DS_CANDIDATES:-none detected (design lead establishes baseline)}
 - adapter.health.functionalHealth: $HEALTH (window=last2sprints Fw=$FW Xw=$XW)
 - adapter.health.designPosture: $POSTURE
 - productContext: $PCL_STATUS
@@ -328,6 +352,7 @@ cat <<EOF
   Gates resolved:    designReviewer=${GATE_DESIGN:-null} thesisGuardian=${GATE_THESIS:-null} reviewIntegrity=${GATE_INTEGRITY:-null} firstUseCritic=${GATE_FIRSTUSE:-null} qualityControl=${GATE_QC:-null}
   Capabilities:      asyncLoop=$ASYNC_LOOP codex=$CODEX metaswarm=$METASWARM bugsweep=$BUGSWEEP tracker=$TRACKER
   Design skills:     review=${D_REVIEW:-null} consult=${D_CONSULT:-null} a11y=${D_A11Y:-null} frontend=${D_FRONTEND:-null}
+  Design system:     ${DS_CANDIDATES:-none detected — design lead establishes baseline}
   Functional health: $HEALTH  →  design posture: $POSTURE
   Product context:   $PCL_STATUS
   Mapping written →  $RK  (## Lead & gate mapping)

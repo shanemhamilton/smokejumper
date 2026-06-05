@@ -71,8 +71,15 @@ payments, health/safety verdicts, crypto), note its location with one line — e
 - Codex CLI: present / absent
 - Issue tracker: type + commands
 - Detected design skills (`adapter.skills.design.review|consult|a11y|frontend`)
+- Design-system source candidate paths (`adapter.designSystem`) — verified into `## Design system` by the design lead
 - Windowed `functionalHealth` + derived `designPosture` (`adapter.health.*`)
 - Any other orchestration or tooling detected
+
+**`## Design system`** — the repo's design source of truth. **Written by the design lead** (token/
+theme paths, color/spacing/type scales, component library location, UI conventions) from actual
+code inspection; the adapter scan records only candidate paths in `## Capabilities`
+(`adapter.designSystem`) and never writes this section. On later sprints RECON loads it; the design
+lead verifies and updates it in place. Append/update only. Starts empty.
 
 **`## Known traps`** — gotchas learned in prior sprints (e.g., "deploy requires `--force`
 for memory changes", "nested git repo at `backend/` — do not nest commits"). Starts empty
@@ -108,11 +115,13 @@ Read broadly but record concisely. You are modeling, not auditing.
 6. **Run the deterministic adapter scan** — `scripts/sj-adapter-scan.sh <target>` (the
    executable implementation of `adapter.md`). It writes `## Lead & gate mapping` +
    `## Capabilities` (including `adapter.skills.design.*` and the windowed `functionalHealth` /
-   `designPosture`), emits `capability_*` and `design_posture_set` events, and prints the "Leads
-   established" banner. Then **establish the leads**: read the resolved lead definition files (or
-   dispatch them, if your runtime can) per `references/runtime.md` — resolving a name is not
-   establishing a lead. Read the `## Design skills` tally and note which skills to recommend this
-   sprint; if RECON gathered live test/build status, you may adjust `functionalHealth` one level.
+   `designPosture`, and `adapter.designSystem` candidate paths), emits `capability_*` and
+   `design_posture_set` events, and prints the "Leads established" banner. Then **establish the
+   leads**: read the resolved lead definition files (or dispatch them, if your runtime can) per
+   `references/runtime.md` — resolving a name is not establishing a lead. Read the `## Design skills`
+   tally and note which skills to recommend this sprint; if RECON gathered live test/build status,
+   you may adjust `functionalHealth` one level. The design lead verifies the design-system
+   candidates against the code and writes/updates the durable `## Design system` section.
 7. **Establish product context** per `references/product-context.md`: read an existing
    product context layer, or — if none exists (the greenfield case) — bootstrap one before
    DECIDE. Record its path under `## Capabilities`.
