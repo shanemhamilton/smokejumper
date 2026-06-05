@@ -67,7 +67,7 @@
         "skillPrefix": "anthropic-skills:handoff-prompt",
         "skillDir": "handoff-prompt-skill"
       },
-      "pin": null,
+      "pin": "0.1.0",
       "tested": null,
       "absentBehavior": "Phase 8 writes <target>/.smokejumper/HANDOFF.md directly (built-in fallback)."
     },

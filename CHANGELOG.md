@@ -3,6 +3,8 @@
 All notable changes to SmokeJumper are documented here. Format: [Keep a Changelog](https://keepachangelog.com/). Versioning: [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Changed
+- Pinned `anthropic-skills:handoff-prompt` to `0.1.0` in the dependency manifest now that its upstream ([shanemhamilton/handoff-prompt-skill](https://github.com/shanemhamilton/handoff-prompt-skill)) published its first release. The drift check now tracks it instead of treating it as unpinned.
 
 ## [0.8.0] - 2026-06-04
 ### Added
