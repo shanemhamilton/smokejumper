@@ -55,6 +55,7 @@ Before Phase 1 work, self-identify the runtime and pick the execution mode:
      | Named skill | File-based fallback |
      |---|---|
      | (lead/gate dispatch) | Adopt `agents/*.md` inline |
+     | `metaswarm:*` gate routing | Use the bundled adversarial review flow (metaswarm needs the Skill tool) |
      | product context bootstrap | `references/product-context.md` + `templates/product-context.md` (already file-based — no skill needed) |
      | `choo-choo-ralph:*` (Lane A) | If the `ralph`/`bd` CLIs are absent, Lane A is unavailable → route all work to Lane B (`references/gated-pour.md` degradation) |
      | `anthropic-skills:handoff-prompt` (Phase 8) | Write `<target>/.smokejumper/HANDOFF.md` directly (already specified in `SKILL.md` Phase 8) |

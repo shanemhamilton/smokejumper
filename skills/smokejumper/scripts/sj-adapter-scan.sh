@@ -133,9 +133,20 @@ cap() { # cap <label> <test-cmd...> ; sets CAP_RESULT=yes|no and emits an event
   if "$@" >/dev/null 2>&1; then CAP_RESULT=yes; emit RECON capability_detected "$label"
   else CAP_RESULT=no; emit RECON capability_absent "$label"; fi
 }
-has_ralph() { command -v ralph || command -v choo-choo-ralph || ls "$HOME/.claude/skills/choo-choo-ralph" 2>/dev/null; }
+# plugin_present <name> — true if installed as a skill dir OR a plugin (cache/data/marketplaces,
+# which nest as ~/.claude/plugins/<kind>/<name>-marketplace/<name>).
+plugin_present() {
+  local n="$1"
+  [ -d "$HOME/.claude/skills/$n" ] && return 0
+  ls -d "$HOME"/.claude/plugins/*/"$n"* >/dev/null 2>&1 && return 0
+  ls -d "$HOME"/.claude/plugins/*/*"$n"* >/dev/null 2>&1 && return 0
+  return 1
+}
+has_ralph() { command -v ralph >/dev/null 2>&1 || plugin_present choo-choo-ralph; }
+has_metaswarm() { plugin_present metaswarm; }
 cap "async loop tool (choo-choo-ralph)" has_ralph;      ASYNC_LOOP="$CAP_RESULT"
 cap "Codex CLI"                          command -v codex; CODEX="$CAP_RESULT"
+cap "metaswarm (adversarial-gate backend)" has_metaswarm; METASWARM="$CAP_RESULT"
 cap "issue tracker: beads (bd)"          command -v bd;    BD="$CAP_RESULT"
 TRACKER="none"
 [ "$BD" = "yes" ] && TRACKER="beads"
@@ -214,6 +225,7 @@ EOF
 CAPABILITIES="$(cat <<EOF
 - adapter.capabilities.asyncLoop: $ASYNC_LOOP (Lane A $([ "$ASYNC_LOOP" = yes ] && echo available || echo unavailable → all work Lane B))
 - adapter.capabilities.codex: $CODEX
+- adapter.capabilities.metaswarm: $METASWARM (yes → may route the adversarial gate through metaswarm; no → bundled flow)
 - adapter.capabilities.tracker: $TRACKER
 - productContext: $PCL_STATUS
 EOF
@@ -232,7 +244,7 @@ cat <<EOF
   Engineering lead:  $ENG_LEAD   [$ENG_SRC]
   Design lead:       $DESIGN_LEAD   [$DESIGN_SRC]
   Gates resolved:    designReviewer=${GATE_DESIGN:-null} thesisGuardian=${GATE_THESIS:-null} reviewIntegrity=${GATE_INTEGRITY:-null} firstUseCritic=${GATE_FIRSTUSE:-null} qualityControl=${GATE_QC:-null}
-  Capabilities:      asyncLoop=$ASYNC_LOOP codex=$CODEX tracker=$TRACKER
+  Capabilities:      asyncLoop=$ASYNC_LOOP codex=$CODEX metaswarm=$METASWARM tracker=$TRACKER
   Product context:   $PCL_STATUS
   Mapping written →  $RK  (## Lead & gate mapping)
 =======================================

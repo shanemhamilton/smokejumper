@@ -19,11 +19,13 @@ plugin itself).
 
 ## Before You Start
 
-**Update check (non-blocking):** As the first action, run `scripts/sj-version-check.sh`.
-If it prints an update notice, relay it to the user once, then continue the sprint — it is
-informational, never a gate. The script is fail-silent: no network, no `curl`, or an API
-error produces no output. Do not run an upgrade yourself; surface the command and let the
-user decide.
+**Update check (non-blocking):** As the first action, run `scripts/sj-version-check.sh`
+(SmokeJumper itself) and `scripts/sj-deps-check.sh` (its declared dependencies — see
+`references/dependencies.md`). If either prints a notice, relay it to the user once, then
+continue the sprint — both are informational, never a gate. Both are fail-silent (no
+network, no `curl`/`python3`, or an API error produces no output) and notify-only: they
+never auto-upgrade and never overwrite the vendored product-context copy. Surface the
+command (`… --update`, or the printed upgrade line) and let the user decide.
 
 **Checklist:** Create one tracker item per phase in the detected issue tracker and work
 them in order. If no issue tracker is present, track phases in
@@ -179,10 +181,15 @@ The leads produce the design and implementation plan:
 
 After the plan is drafted, **run the full adversarial flow on the design and plan** using
 the gate roles resolved from `adapter.gate.*`. This is the FRONT-LOADED gate that
-authorizes execution — including authorizing any autonomous pour. If the repo defines no
-plan-review gate, the bundled SmokeJumper three-reviewer parallel gate applies:
-Feasibility reviewer, Completeness reviewer, Scope & Alignment reviewer. **ALL must PASS
-before any code is written and before any pour is launched.**
+authorizes execution — including authorizing any autonomous pour. Gate precedence:
+**project-specific gates (`adapter.gate.*`) → metaswarm (if detected) → bundled fallback.**
+If `adapter.capabilities.metaswarm` is `yes` and your runtime can invoke skills (Claude
+Code), you MAY route this gate through `metaswarm:plan-review-gate` and (for design)
+`metaswarm:design-review-gate` — its cross-model parallel reviewers are a stronger gate than
+the bundled flow. If neither a project gate nor metaswarm applies (or you are under a
+non-Claude runtime with no Skill tool), the bundled SmokeJumper three-reviewer parallel gate
+applies: Feasibility reviewer, Completeness reviewer, Scope & Alignment reviewer. **ALL must
+PASS before any code is written and before any pour is launched.**
 
 For user-facing work, the design adversarial flow runs in parallel:
 design reviewer → first-impression/first-use critic (if present in `adapter.gate.*`) →
@@ -268,9 +275,12 @@ Review is layered:
 
 **Lane B units — full adversarial review before push:**
 
-Run the full per-change adversarial flow resolved from `adapter.gate.*`. If the repo
-defines no flow, the bundled SmokeJumper flow applies: quality/correctness reviewer →
-review-integrity (anti-sycophancy) gate. For user-facing changes, prepend: design
+Run the full per-change adversarial flow resolved from `adapter.gate.*`. If
+`adapter.capabilities.metaswarm` is `yes` (Claude Code runtime), you MAY run the per-unit
+loop via `metaswarm:orchestrated-execution` (IMPLEMENT → VALIDATE → ADVERSARIAL REVIEW →
+COMMIT) — its different-model reviewer is the cross-model gate. If the repo defines no flow
+and metaswarm is absent, the bundled SmokeJumper flow applies: quality/correctness reviewer
+→ review-integrity (anti-sycophancy) gate. For user-facing changes, prepend: design
 reviewer → first-impression/first-use critic (if `adapter.gate.*` declares one).
 
 The engineering lead creates the `.adversarial-review-passed` marker (or the project's
@@ -315,6 +325,10 @@ detected in RECON:
 - No force-push to any shared branch.
 - If the repo uses admin-merge (CI retired), use the detected merge command once
   local-green + adversarial review pass.
+
+If `adapter.capabilities.metaswarm` is `yes` (Claude Code runtime) and the change goes
+through a pull request, you MAY use `metaswarm:pr-shepherd` to drive the PR through CI and
+review-thread resolution to merge; otherwise integrate directly per the discipline above.
 
 **Merging is not deploying.** Never run a deploy, release, or publish without explicit
 human greenlight. This is absolute. Record the push in `sprint-log.jsonl`.
@@ -422,6 +436,8 @@ adoption under any other orchestrator — including a Codex agent driving the sp
 | No project leads | Bundled generic leads run |
 | `choo-choo-ralph` installed | Lane A (big pour) available |
 | `choo-choo-ralph` absent | Offer install; else Lane-B-only; record gap |
+| `metaswarm` installed (Claude Code) | Adversarial gate may route through metaswarm (precedence: project gates → metaswarm → bundled) |
+| `metaswarm` absent or non-Claude runtime | Bundled adversarial review flow — no functional loss |
 | Issue tracker present | Use it for durable state (tracker item per phase) |
 | No issue tracker | State lives in `<target>/.smokejumper/` only |
 | Missing specialist agent | Self-heal: author into target `.claude/agents/` + log gap |
@@ -436,6 +452,7 @@ adoption under any other orchestrator — including a Codex agent driving the sp
 ## References
 
 - `references/runtime.md` — adopt-vs-dispatch role model + runtime preflight (loaded first in RECON)
+- `references/dependencies.md` + `references/dependencies.json` — declared dependency manifest + pin/notify/opt-in update policy (used by `sj-deps-check.sh` and the adapter)
 - `references/recon.md` — whole-repo architecture modeling (used in RECON)
 - `references/adapter.md` — naming-convention lead + capability detection, implemented by `scripts/sj-adapter-scan.sh` (used in RECON)
 - `references/product-context.md` — embedded product-context bootstrap (Context/Setup/Update), with `templates/product-context.md` (used in RECON, DECIDE, LESSONS LEARNED)

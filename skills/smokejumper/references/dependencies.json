@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "policy": "pin-notify-optin",
+  "policyNote": "Pin a tested version per dependency for stability. The sprint-start check (scripts/sj-deps-check.sh) NOTIFIES when an upstream has moved past the pin; it never auto-upgrades. Run `sj-deps-check.sh --update` to bump pins to the detected latest after you have tested them. metaswarm and the runtime backends are OPTIONAL \u2014 absence degrades gracefully per `absentBehavior`, it never blocks a sprint.",
+  "dependencies": [
+    {
+      "id": "choo-choo-ralph",
+      "kind": "backend",
+      "required": false,
+      "purpose": "Lane A async 'big pour' execution engine (spec -> pour -> formula -> harvest).",
+      "source": {
+        "type": "github-release",
+        "repo": "mj-meyer/choo-choo-ralph"
+      },
+      "detect": {
+        "skillDir": "choo-choo-ralph",
+        "bin": "ralph"
+      },
+      "pin": "0.2.1",
+      "tested": null,
+      "absentBehavior": "Lane A unavailable -> all work routes to Lane B (synchronous crew); gap logged."
+    },
+    {
+      "id": "metaswarm",
+      "kind": "backend",
+      "required": false,
+      "purpose": "Optional adversarial-gate backend: cross-model review gates (plan/design), orchestrated IMPLEMENT->VALIDATE->REVIEW->COMMIT, and PR shepherd. When present (Claude Code runtime), SmokeJumper's gate phases may route through it; see SKILL.md Phases 3/5/6.",
+      "source": {
+        "type": "github-release",
+        "repo": "dsifry/metaswarm"
+      },
+      "detect": {
+        "skillDir": "metaswarm",
+        "skillPrefix": "metaswarm:"
+      },
+      "pin": "0.11.0",
+      "tested": null,
+      "absentBehavior": "Use SmokeJumper's bundled adversarial review flow (the default). No functional loss; metaswarm only enriches the gate when installed under a Skill-tool-capable runtime."
+    },
+    {
+      "id": "anthropic-skills:handoff-prompt",
+      "kind": "skill",
+      "required": false,
+      "purpose": "Phase 8 HANDOFF \u2014 high-fidelity handoff prompt generation.",
+      "source": {
+        "type": "manual",
+        "note": "Community 'anthropic-skills' marketplace plugin; canonical repo not yet recorded. Fill source.repo when known to enable auto version-check."
+      },
+      "detect": {
+        "skillPrefix": "anthropic-skills:handoff-prompt"
+      },
+      "pin": null,
+      "tested": null,
+      "absentBehavior": "Phase 8 writes <target>/.smokejumper/HANDOFF.md directly (built-in fallback)."
+    },
+    {
+      "id": "product-pilot",
+      "kind": "vendored",
+      "required": false,
+      "purpose": "Product-context layer. EMBEDDED into SmokeJumper as references/product-context.md + templates/product-context.md so it works without the Skill tool (e.g. under a Codex orchestrator). Tracked here so the vendored copy can be re-synced from upstream.",
+      "source": {
+        "type": "github-release",
+        "repo": "shanemhamilton/product-pilot"
+      },
+      "vendoredAt": [
+        "skills/smokejumper/references/product-context.md",
+        "skills/smokejumper/templates/product-context.md"
+      ],
+      "detect": {
+        "skillPrefix": "product-pilot"
+      },
+      "pin": null,
+      "tested": null,
+      "syncBehavior": "When upstream moves past the vendored pin, re-sync the embedded copy (generalize + scrub), then bump the pin. The check NOTIFIES; it never overwrites the vendored copy automatically."
+    },
+    {
+      "id": "beads",
+      "kind": "tracker",
+      "required": false,
+      "purpose": "Git-native issue tracker (`bd`) used for durable sprint state and as choo-choo-ralph's backing store.",
+      "source": {
+        "type": "manual",
+        "note": "Steve Yegge's Beads; record source.repo (e.g. owner/beads) when confirmed to enable auto version-check."
+      },
+      "detect": {
+        "bin": "bd"
+      },
+      "pin": null,
+      "tested": null,
+      "absentBehavior": "State lives in <target>/.smokejumper/ only; no bead IDs in the sprint log."
+    },
+    {
+      "id": "codex",
+      "kind": "backend",
+      "required": false,
+      "purpose": "Cross-model execution backend (Codex CLI) for large self-contained work and cross-model review.",
+      "source": {
+        "type": "github-release",
+        "repo": "openai/codex"
+      },
+      "detect": {
+        "bin": "codex"
+      },
+      "pin": "0.137.0",
+      "tested": null,
+      "absentBehavior": "Async/formula steps and reviews use Claude only; single-model review noted in the sprint summary."
+    },
+    {
+      "id": "gh",
+      "kind": "tracker",
+      "required": false,
+      "purpose": "GitHub CLI \u2014 issue-tracker fallback when Beads is absent.",
+      "source": {
+        "type": "github-release",
+        "repo": "cli/cli"
+      },
+      "detect": {
+        "bin": "gh"
+      },
+      "pin": "2.93.0",
+      "tested": null,
+      "absentBehavior": "Falls through to a scratch tracker in <target>/.smokejumper/."
+    }
+  ]
+}

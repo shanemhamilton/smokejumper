@@ -86,8 +86,9 @@ Leads always have a bundled fallback; gates do not.
 
 | Capability | How to detect | If absent |
 |---|---|---|
-| Async loop tool (choo-choo-ralph or equivalent) | `which ralph` or `ls ~/.claude/skills/choo-choo-ralph/` or `which choo-choo-ralph` | Lane A (async pour) not available; all work routes to Lane B |
+| Async loop tool (choo-choo-ralph or equivalent) | `which ralph`, or installed as a skill/plugin (`sj-adapter-scan.sh` checks `~/.claude/skills/` and `~/.claude/plugins/`) | Lane A (async pour) not available; all work routes to Lane B |
 | Codex CLI | `which codex` | Async formula steps use Claude directly (slower); token budget impact noted |
+| metaswarm (adversarial-gate backend) | installed as a skill dir or plugin under `~/.claude/plugins/` | Use SmokeJumper's bundled adversarial review flow — no functional loss |
 | Issue tracker — beads/bd | `which bd` | State lives in `.smokejumper/` only; no bead IDs in sprint-log |
 | Issue tracker — GitHub Issues | `gh issue list` exits 0 | Use gh for issue tracking |
 | Issue tracker — none | Neither above found | Create a `sprint-plan.md` scratch tracker in `.smokejumper/` |
@@ -143,6 +144,7 @@ is skipped — a gate is never fabricated with a bundled generic.
 | `adapter.capabilities.tracker` | string \| null | Detected issue tracker (`"beads"`, `"github"`, or `null`) |
 | `adapter.capabilities.asyncLoop` | boolean | Async loop tool present → Lane A available |
 | `adapter.capabilities.codex` | boolean | Codex CLI present → cross-model review available |
+| `adapter.capabilities.metaswarm` | boolean | metaswarm present → gate phases may route through it (Claude Code runtime); else bundled flow |
 | `adapter.capabilities.syncFrameworks` | string[] | Detected synchronous execution frameworks (ask human if length > 1) |
 
 ### `adapter.model.*` — detected model-tier conventions

@@ -1,0 +1,57 @@
+name: dependency-scan
+
+# Periodic "scan for stability" lane: checks each declared dependency's upstream against the
+# pin committed in references/dependencies.json and opens (or comments on) an issue when one
+# has moved ahead. This keeps the plugin maintainer current without touching anyone's sprint
+# — sprint-time stays pinned; upgrades remain a deliberate, reviewed `sj-deps-check.sh --update`.
+
+on:
+  schedule:
+    - cron: "17 9 * * 1" # Mondays 09:17 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check dependency drift
+        id: check
+        run: |
+          bash skills/smokejumper/scripts/sj-deps-check.sh > drift.txt 2>/dev/null || true
+          if grep -q 'behind their pin' drift.txt; then
+            echo "has_drift=true" >> "$GITHUB_OUTPUT"
+            cat drift.txt
+          else
+            echo "has_drift=false" >> "$GITHUB_OUTPUT"
+            echo "All pinned dependencies are current."
+          fi
+
+      - name: Open or update drift issue
+        if: steps.check.outputs.has_drift == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '`sj-deps-check.sh` found dependencies behind their committed pin:'
+            echo
+            echo '```'
+            cat drift.txt
+            echo '```'
+            echo
+            echo 'Review and test, then run `sj-deps-check.sh --update` to bump the pins.'
+          } > body.md
+          title="Dependency drift: an upstream moved past its pin"
+          num="$(gh issue list --state open --json number,title \
+                 --jq '.[] | "\(.number)\t\(.title)"' \
+                 | awk -F'\t' -v t="$title" '$2==t {print $1; exit}')"
+          if [ -n "$num" ]; then
+            gh issue comment "$num" --body-file body.md
+          else
+            gh issue create --title "$title" --body-file body.md
+          fi

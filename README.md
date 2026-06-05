@@ -163,6 +163,33 @@ Any work unit marked safety-critical by the target repo's guardian convention is
 
 ---
 
+## Dependencies
+
+SmokeJumper is a thin orchestration layer — it composes other projects rather than
+reimplementing them. The set is declared in `skills/smokejumper/references/dependencies.json`
+(explained in `dependencies.md`), so it's explicit, trackable, and easy to extend.
+
+| Dependency | Role | Status |
+|---|---|---|
+| [choo-choo-ralph](https://github.com/mj-meyer/choo-choo-ralph) | Lane A async "big pour" engine | optional backend |
+| [metaswarm](https://github.com/dsifry/metaswarm) | optional adversarial-gate backend (cross-model gates, PR shepherd) | optional backend |
+| [product-pilot](https://github.com/shanemhamilton/product-pilot) | product-context layer | **vendored** (embedded, re-synced from upstream) |
+| anthropic-skills:handoff-prompt | Phase 8 handoff | optional (built-in fallback) |
+| Beads (`bd`) · Codex CLI · `gh` | tracker / exec / tracker-fallback | optional, adapter-detected |
+
+Only **git** and **one of** Claude Code or Codex are hard-required; every dependency above
+degrades gracefully when absent (it never blocks a sprint).
+
+**Staying current — pin → notify → opt-in (never silent auto-pull).** Each dependency carries
+a tested `pin`. At sprint start, `scripts/sj-deps-check.sh` notifies (fail-silent,
+time-boxed) when an upstream has moved past its pin; `sj-deps-check.sh --update` bumps the
+pins on demand and prints the upgrade commands. A scheduled GitHub Action
+(`.github/workflows/dependency-scan.yml`) runs the same check in this repo and opens an issue
+when an upstream moves — so the plugin stays current without touching anyone's sprint.
+**Adding a new dependency is one JSON entry** (`dependencies.md` documents the schema).
+
+---
+
 ## How it self-improves
 
 Every sprint produces two write-backs:
@@ -185,14 +212,18 @@ agents/
   smokejumper-design-lead.md
 skills/smokejumper/
   SKILL.md               # 8-phase orchestrator (the /smokejumper entry point)
-  references/            # runtime, recon, adapter, product-context, gated-pour, self-healing, schema, lessons-learned
+  references/            # runtime, recon, adapter, product-context, dependencies, gated-pour, self-healing, schema, lessons-learned
+  references/dependencies.json  # declared dependency manifest (single source of truth)
   agents/openai.yaml     # Codex skill-discovery metadata
   templates/
     product-context.md   # embedded PRODUCT_PILOT-style brief (no external skill needed)
   scripts/
     sj-init.sh           # scaffolds <target>/.smokejumper/ (idempotent)
     sj-adapter-scan.sh   # deterministic lead/gate/capability scan → mapping + banner + events
-    sj-version-check.sh  # non-blocking update check, run at sprint start
+    sj-version-check.sh  # non-blocking SmokeJumper update check, run at sprint start
+    sj-deps-check.sh     # non-blocking dependency drift check (--update to bump pins)
+.github/workflows/
+  dependency-scan.yml    # scheduled upstream-drift scan → opens an issue
 docs/specs/              # design spec
 CHANGELOG.md
 VERSION

@@ -4,6 +4,16 @@ All notable changes to SmokeJumper are documented here. Format: [Keep a Changelo
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-06-04
+### Added
+- **Declared dependency manifest** (`skills/smokejumper/references/dependencies.json` + `dependencies.md`). The projects SmokeJumper composes — choo-choo-ralph, metaswarm, product-pilot (vendored), anthropic-skills:handoff-prompt, Beads, Codex, gh — are now explicit and trackable, each with `kind` / `source` / `detect` / `pin` / `absentBehavior`. Adding a dependency is one JSON entry; the adapter and the dependency check both read this single source of truth.
+- **Dependency drift check** (`skills/smokejumper/scripts/sj-deps-check.sh`), wired into "Before You Start" beside the self version check. **Pin → notify → opt-in:** at sprint start it notifies (fail-silent, time-boxed, 12h-cached) when an upstream has moved past its pinned/tested version; `--update` bumps the pins and prints the upgrade commands. It never auto-upgrades and never overwrites the vendored product-context copy — matching the project's "pin exact, test first" dependency rules.
+- **Scheduled upstream scan** (`.github/workflows/dependency-scan.yml`): weekly + manual; runs the drift check in this repo and opens/updates an issue when an upstream moves — the "scan for stability" lane that keeps the plugin current without touching anyone's sprint.
+- **metaswarm wired in as an optional adversarial-gate backend.** When detected (`adapter.capabilities.metaswarm`, Claude Code runtime), the PLAN / REVIEW / INTEGRATE gates may route through `metaswarm:plan-review-gate` / `design-review-gate` / `orchestrated-execution` / `pr-shepherd`. Gate precedence is **project-specific gates → metaswarm → bundled fallback**; absent or under a non-Claude runtime, the bundled flow applies with no functional loss.
+
+### Changed
+- `sj-adapter-scan.sh` capability detection now finds skills installed as **plugins** (under `~/.claude/plugins/`), not only `~/.claude/skills/` dirs — fixing false negatives for choo-choo-ralph and metaswarm. Adds `adapter.capabilities.metaswarm`.
+
 ## [0.6.0] - 2026-06-04
 ### Added
 - **Runtime portability for non-Claude orchestrators** (`skills/smokejumper/references/runtime.md`, `SKILL.md`). Where v0.4.0 made SmokeJumper *installable* under Codex, this makes it *behave correctly* when a Codex agent **orchestrates** the sprint. A runtime preflight in RECON self-identifies the orchestrator. When subagent dispatch and the Skill tool are unavailable, leads and reviewers are *adopted inline* by reading their definition files, and the embedded reference files are used directly. The three lead agents and the portability contract now state the adopt-vs-dispatch model explicitly. Fixes the silent no-op where lead establishment never happened under a Codex orchestrator.
