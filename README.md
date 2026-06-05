@@ -78,6 +78,35 @@ file-and-shell capable agent) is the top-level orchestrator** — point the agen
 
 ---
 
+## Lead establishment & product context
+
+Two RECON outputs are durable, visible artifacts rather than steps an orchestrator has to remember — so they hold up under any runtime, including a Codex agent that skims prose.
+
+**Leads are established by a deterministic scan, not from memory.** `scripts/sj-adapter-scan.sh` resolves the product / engineering / design leads (a project-specific override or the bundled fallback), the gate roles, and the available capabilities; writes the mapping into `<target>/.smokejumper/repo-knowledge.md`; emits a `leads_established` event to the sprint log; and prints a banner:
+
+```
+=== SmokeJumper — Leads Established ===
+  Product lead:      smokejumper-product-lead   [BUNDLED]
+  Engineering lead:  smokejumper-engineering-lead   [BUNDLED]
+  Design lead:       smokejumper-design-lead   [BUNDLED]
+  Gates resolved:    designReviewer=null thesisGuardian=null reviewIntegrity=null firstUseCritic=null qualityControl=null
+  Capabilities:      asyncLoop=no codex=yes tracker=beads
+  Product context:   MISSING — run Setup before DECIDE
+=======================================
+```
+
+A lead is a **persona**, not a mandatory subagent: the orchestrator establishes it by reading its definition file and adopting it — or dispatching it, where the runtime supports that. Gate roles and safety/invariant guardians resolve from the **target** repo's `.claude/agents/` only — a foreign project's gate pulled from the global dir is misleading, and a foreign guardian is unsafe (absent must route safety-critical work to the human).
+
+**Product context is bootstrapped, not inferred.** Before DECIDE, RECON establishes a compact PRODUCT_PILOT-style brief — phase, active milestone, blockers, metrics, differentiator:
+
+- **Context mode** — a product-context layer already exists → read it as authoritative input to DECIDE.
+- **Setup mode** — none exists (the brand-new-repo case) → a short discovery interview writes one to `docs/product/PRODUCT_PILOT.md`.
+- **Update mode** — LESSONS LEARNED reflects shipped work back into it.
+
+The bootstrap is fully self-contained (`references/product-context.md` + `templates/product-context.md`) with **no dependency on any external skill**, and it never fabricates: unknown metrics, competitors, and milestones are marked `[TODO]`, and an autonomous run with no human to interview stamps the artifact `unverified`.
+
+---
+
 ## The 8-phase lifecycle
 
 Full design: [`docs/specs/2026-06-04-smokejumper-framework-design.md`](docs/specs/2026-06-04-smokejumper-framework-design.md)
