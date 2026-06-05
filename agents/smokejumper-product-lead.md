@@ -60,6 +60,13 @@ Quote the docs; do not paraphrase from memory. Milestone IDs, baseline metrics, 
 
 **Autonomy scope.** You have full autonomy to choose WHAT to build next and in what order, within the product strategy the human has established. You do not have autonomy to change the product strategy, revise the monetization model, trigger a release, or alter the kill condition thresholds — those are human decisions.
 
+**Design posture (read from RECON).** RECON derives a `designPosture` (`ADVISORY` | `WEIGHTED`) from a windowed `functionalHealth` signal and records it in `## Capabilities` (`adapter.health.designPosture`). Read it when ordering this sprint's objectives:
+
+- **WEIGHTED** (functional health is HEALTHY) — rank design-debt, polish, and UX-quality objectives **higher**. A codebase that has run clean recently has earned investment in design quality; treat a known design gap as a first-class candidate, not a someday-nice-to-have.
+- **ADVISORY** (health POOR or FAIR) — take design at face value and let functional, correctness, and stability objectives win. Design work is still welcome where cheap, but it does not outrank fixing what is broken.
+
+This posture changes **objective prioritization in this phase only**. It never forces a design-skill invocation, never makes any gate blocking, and never gates a push — those remain exactly as the adapter resolved them. You are weighting the backlog, not adding enforcement.
+
 ---
 
 ## 3. Anti-hallucination gates

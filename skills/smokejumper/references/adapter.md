@@ -96,9 +96,23 @@ Leads always have a bundled fallback; gates do not.
 | Cloud/platform deploy config | `deploy.json`, platform config, or CI deploy job present | Deploy gate uses project-specific deploy command |
 | Docker / container | `Dockerfile` present | Treat as containerized; note in capabilities |
 | Product context layer | `docs/product/PRODUCT_PILOT.md`, `docs/product/*.md`, `PRODUCT.md`, or `.smokejumper/product-context.md` present | Recorded as `productContext: MISSING`; RECON runs Setup (`references/product-context.md`) before DECIDE |
+| Design skills / plugins | `sj-adapter-scan.sh` scans `~/.claude/skills/*/SKILL.md`, `~/.claude/skills/gstack/*/SKILL.md`, and `frontend-design` in `~/.claude/plugins/installed_plugins.json` for design-review / design-consultation / accessibility / frontend-design skills | Recorded as `adapter.skills.design.*` (null per key); the design lead proceeds analytically — manual critique + a WCAG 2.2 AA check by hand |
 
 Record all capability detections in `## Capabilities` in `repo-knowledge.md` and emit
 `capability_detected` or `capability_absent` events to `sprint-log.jsonl`.
+
+**Design skills resolve globally, not target-only.** Unlike gate roles (`adapter.gate.*`), design
+skills are *capabilities* — installed tooling in `~/.claude/skills/` and `~/.claude/plugins/`, not
+a target project's named agents. The target-only correctness rule does not apply: a globally
+installed design skill is the intended, shared tool. The scan records which design skills exist;
+the per-repo *effectiveness* of each (which to prefer next sprint) lives in the `## Design skills`
+tally, written by LESSONS LEARNED — see `repo-knowledge-schema.md` and `lessons-learned.md`.
+
+**Functional health → design posture.** The scan also derives a windowed `functionalHealth`
+(POOR | FAIR | HEALTHY) from recent sprints and maps it to a `designPosture` (ADVISORY | WEIGHTED),
+written into `## Capabilities` and emitted as a `design_posture_set` event. DECIDE reads
+`designPosture` to weight design-debt objectives — prioritization only, never gating. See
+`SKILL.md` Phase 2 and `smokejumper-product-lead.md`.
 
 ---
 
@@ -162,6 +176,17 @@ is skipped — a gate is never fabricated with a bundled generic.
 | Key | Type | Meaning |
 |---|---|---|
 | `adapter.skills.simplify` | string \| null | Resolved simplify / complexity-reduction skill (`null` → use a manual simplify pass) |
+| `adapter.skills.design.review` | string \| null | Resolved designer's-eye QA / design-review skill (`null` → manual critique) |
+| `adapter.skills.design.consult` | string \| null | Resolved design-consultation / design-system / design-html skill (`null` → analytical) |
+| `adapter.skills.design.a11y` | string \| null | Resolved accessibility-review skill (`null` → WCAG 2.2 AA checks by hand) |
+| `adapter.skills.design.frontend` | string \| null | Resolved frontend-design plugin/skill (`null` → no production-UI generator) |
+
+### `adapter.health.*` — windowed functional-health signal
+
+| Key | Type | Meaning |
+|---|---|---|
+| `adapter.health.functionalHealth` | string | `POOR` \| `FAIR` \| `HEALTHY` — derived from gate/outcome failures over the last 2 sprints |
+| `adapter.health.designPosture` | string | `ADVISORY` (health POOR/FAIR) \| `WEIGHTED` (health HEALTHY) — read by DECIDE for objective prioritization only |
 
 ---
 
@@ -195,6 +220,8 @@ Run this during Phase 1 (RECON). Check each item; record results.
 - [ ] Check for issue tracker (bd → gh → none) → `adapter.capabilities.tracker`
 - [ ] Check for synchronous execution frameworks → `adapter.capabilities.syncFrameworks[]`
 - [ ] Resolve simplify skill → `adapter.skills.simplify`
+- [ ] Detect available design skills/plugins → `adapter.skills.design.review|consult|a11y|frontend`
+- [ ] Derive windowed functional health → `adapter.health.functionalHealth` / `.designPosture` (emit `design_posture_set`)
 - [ ] Detect model-tier conventions → `adapter.model.*`
 - [ ] Check for any project-specific deploy tooling
 - [ ] Write `## Lead & gate mapping` + `## Capabilities` + `## Model tier` in `repo-knowledge.md`

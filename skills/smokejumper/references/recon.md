@@ -70,11 +70,18 @@ payments, health/safety verdicts, crypto), note its location with one line — e
 - Async loop tool (choo-choo-ralph or equivalent): present / absent
 - Codex CLI: present / absent
 - Issue tracker: type + commands
+- Detected design skills (`adapter.skills.design.review|consult|a11y|frontend`)
+- Windowed `functionalHealth` + derived `designPosture` (`adapter.health.*`)
 - Any other orchestration or tooling detected
 
 **`## Known traps`** — gotchas learned in prior sprints (e.g., "deploy requires `--force`
 for memory changes", "nested git repo at `backend/` — do not nest commits"). Starts empty
 on first sprint; accumulates across sprints.
+
+**`## Design skills`** — accumulative per-skill effectiveness tally. **Populated by LESSONS
+LEARNED, surfaced read-only by RECON — RECON never writes it** (the adapter scan never writes it
+either). RECON reads the tally and recommends the proven (score > 0) skills for this sprint.
+Starts empty.
 
 **`## What worked / What to avoid`** — execution patterns from prior sprints. Starts empty.
 
@@ -100,9 +107,12 @@ Read broadly but record concisely. You are modeling, not auditing.
    environment variable requirements.
 6. **Run the deterministic adapter scan** — `scripts/sj-adapter-scan.sh <target>` (the
    executable implementation of `adapter.md`). It writes `## Lead & gate mapping` +
-   `## Capabilities` and prints the "Leads established" banner. Then **establish the leads**:
-   read the resolved lead definition files (or dispatch them, if your runtime can) per
-   `references/runtime.md` — resolving a name is not establishing a lead.
+   `## Capabilities` (including `adapter.skills.design.*` and the windowed `functionalHealth` /
+   `designPosture`), emits `capability_*` and `design_posture_set` events, and prints the "Leads
+   established" banner. Then **establish the leads**: read the resolved lead definition files (or
+   dispatch them, if your runtime can) per `references/runtime.md` — resolving a name is not
+   establishing a lead. Read the `## Design skills` tally and note which skills to recommend this
+   sprint; if RECON gathered live test/build status, you may adjust `functionalHealth` one level.
 7. **Establish product context** per `references/product-context.md`: read an existing
    product context layer, or — if none exists (the greenfield case) — bootstrap one before
    DECIDE. Record its path under `## Capabilities`.
@@ -153,6 +163,7 @@ Emit a short RECON summary to the conversation:
 - Lane-A (async) capable: yes / no
 - Lead agents resolved AND established (definitions read/adopted) — surface the "Leads established" banner
 - Product-context artifact: path + whether read (Context) or bootstrapped (Setup), and verified vs. unverified
+- `functionalHealth` + `designPosture` (and why), plus any proven design skills recommended this sprint (from the `## Design skills` tally)
 - Any blockers or traps found
 
 Then proceed to Phase 2 (DECIDE).
