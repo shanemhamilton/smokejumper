@@ -3,8 +3,6 @@
 All notable changes to SmokeJumper are documented here. Format: [Keep a Changelog](https://keepachangelog.com/). Versioning: [SemVer](https://semver.org/).
 
 ## [Unreleased]
-### Changed
-- Pinned `anthropic-skills:handoff-prompt` to `0.1.0` in the dependency manifest now that its upstream ([shanemhamilton/handoff-prompt-skill](https://github.com/shanemhamilton/handoff-prompt-skill)) published its first release. The drift check now tracks it instead of treating it as unpinned.
 
 ## [0.9.0] - 2026-06-05
 ### Added
@@ -13,6 +11,9 @@ All notable changes to SmokeJumper are documented here. Format: [Keep a Changelo
 - **Design-system discovery + durable model.** The adapter scan surfaces design-system source-of-truth **candidate paths** (`adapter.designSystem` — Tailwind config, theme files, tokens, Storybook, `DESIGN.md`) in `## Capabilities` and the banner. The design lead then does the **authoritative search of the repo/code** and records what it finds — token/theme paths, color/spacing/type scales, component library, UI conventions — into a new durable, append/update `## Design system` section of `repo-knowledge.md` that every later sprint inherits and verifies. Agent-owned: the scan never writes that section (same section-ownership split as `## Design skills`).
 - **Design-skill effectiveness learning loop.** A new append/update-only `## Design skills` tally in `repo-knowledge.md` (owned by LESSONS LEARNED, never written by the adapter scan) scores each invoked design skill via a **gate-or-ship proxy** (the design gate is usually absent), emitting `design_skill_invoked` / `design_skill_outcome` events. RECON surfaces proven (score > 0) skills as recommendations for the next sprint.
 - **Upstream graduation of design-skill recommendations** via the existing Mode B contribution flow — a portable recommendation graduates as a generalized heuristic with the environment-specific skill name scrubbed, never the local tally.
+
+### Changed
+- Pinned `anthropic-skills:handoff-prompt` to `0.1.0` in the dependency manifest now that its upstream ([shanemhamilton/handoff-prompt-skill](https://github.com/shanemhamilton/handoff-prompt-skill)) published its first release. The drift check now tracks it instead of treating it as unpinned.
 
 ## [0.8.0] - 2026-06-04
 ### Added
