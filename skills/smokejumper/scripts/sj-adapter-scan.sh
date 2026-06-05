@@ -176,6 +176,102 @@ else
   emit RECON capability_absent "product context layer MISSING — Setup required before DECIDE"
 fi
 
+# --- Design skills detection (capabilities, resolved globally) ---------------------------
+# Design skills are installed TOOLING (~/.claude/skills, ~/.claude/plugins), not a target
+# project's named agents — so unlike gate roles they resolve globally (see adapter.md). The
+# detection is recomputed each RECON and written into ## Capabilities (clobber-safe). The
+# cross-sprint effectiveness tally lives in ## Design skills, owned by LESSONS LEARNED — this
+# script NEVER writes that section.
+SKILLS_ROOT="$HOME/.claude/skills"
+GSTACK_ROOT="$HOME/.claude/skills/gstack"
+PLUGINS_JSON="$HOME/.claude/plugins/installed_plugins.json"
+
+# _match_skill <dir> <regex> — echoes the first subdir NAME whose <dir>/<name>/SKILL.md exists
+# and whose name matches <regex>. Skills are directories containing SKILL.md (not flat *.md),
+# so the lead/gate _match_in_dir helper cannot find them.
+_match_skill() {
+  local root="$1" pattern="$2" d base
+  [ -d "$root" ] || return 0
+  for d in "$root"/*/; do
+    [ -e "$d/SKILL.md" ] || continue
+    base="$(basename "$d")"
+    if printf '%s' "$base" | grep -Eiq "$pattern"; then printf '%s' "$base"; return 0; fi
+  done
+  return 0
+}
+
+# resolve_design_skill <regex> — global skills dir first, then the gstack subdir.
+resolve_design_skill() {
+  local m
+  m="$(_match_skill "$SKILLS_ROOT" "$1")"; [ -n "$m" ] && { printf '%s' "$m"; return 0; }
+  _match_skill "$GSTACK_ROOT" "$1"
+}
+
+D_REVIEW="$(resolve_design_skill 'design-review|design-shotgun')"
+D_CONSULT="$(resolve_design_skill 'design-consultation|design-html|design-system')"
+D_A11Y="$(resolve_design_skill 'accessibility|a11y|wcag')"
+D_FRONTEND=""
+if [ -f "$PLUGINS_JSON" ] && grep -q '"frontend-design@' "$PLUGINS_JSON" 2>/dev/null; then
+  D_FRONTEND="frontend-design (plugin)"
+fi
+for pair in "review:$D_REVIEW" "consult:$D_CONSULT" "a11y:$D_A11Y" "frontend:$D_FRONTEND"; do
+  k="${pair%%:*}"; v="${pair#*:}"
+  if [ -n "$v" ]; then emit RECON capability_detected "design skill $k: $v"
+  else emit RECON capability_absent "design skill $k: none (proceed analytically)"; fi
+done
+
+# --- Design system source detection (candidate paths only) -------------------------------
+# A cheap, bounded hint pass over the TARGET repo so design-system candidates are visible in the
+# banner and ## Capabilities. The DESIGN LEAD does the authoritative search + interpretation and
+# writes the durable ## Design system section in repo-knowledge.md — this script never writes it.
+DS_CANDIDATES="$(
+  find "$TARGET" -maxdepth 4 \
+    \( -name node_modules -o -name .git -o -name build -o -name dist -o -name .next \
+       -o -name Pods -o -name vendor -o -name .smokejumper \) -prune -o \
+    -type f \( \
+      -iname 'tailwind.config.*' -o -iname 'DESIGN.md' -o -iname 'STYLEGUIDE.md' \
+      -o -iname 'tokens.*' -o -iname '*.tokens.json' -o -iname 'theme.ts' -o -iname 'theme.css' \
+      -o -iname 'Theme.swift' -o -iname 'DesignSystem*.swift' -o -iname 'Color.kt' -o -iname 'Type.kt' \
+    \) -print 2>/dev/null | head -8 | sed "s#^$TARGET/##" | paste -sd, - || true
+)"
+for d in ".storybook" "design-system" "docs/design"; do
+  [ -d "$TARGET/$d" ] && DS_CANDIDATES="${DS_CANDIDATES:+$DS_CANDIDATES,}$d/"
+done
+if [ -n "$DS_CANDIDATES" ]; then
+  emit RECON capability_detected "design system candidates: $DS_CANDIDATES"
+else
+  emit RECON capability_absent "design system: none detected (design lead establishes baseline)"
+fi
+
+# --- Windowed functional health → design posture -----------------------------------------
+# Scope failure counts to the last 2 DISTINCT prior sprints (exclude the current $SPRINT, which
+# has no outcomes yet at RECON). A cumulative all-time count could never recover — the whole
+# point of the posture is that health climbs back once functional issues are addressed. Sprint
+# IDs are date-stamped (sprint-YYYY-MM-DD), so lexical sort = chronological.
+WIN="$(grep -o '"sprint":"[^"]*"' "$LOG" 2>/dev/null | sed 's/.*:"//; s/"$//' | sort -u | grep -v "^$SPRINT\$" | tail -2 || true)"
+FW=0; XW=0
+if [ -n "$WIN" ]; then
+  while IFS= read -r sid; do
+    [ -n "$sid" ] || continue
+    f="$(grep -c "\"sprint\":\"$sid\".*\"event\":\"gate_failed\"" "$LOG" 2>/dev/null || true)"
+    x="$(grep -Ec "\"sprint\":\"$sid\".*\"outcome\":\"(failed|blocked)\"" "$LOG" 2>/dev/null || true)"
+    FW=$(( FW + ${f:-0} ))
+    XW=$(( XW + ${x:-0} ))
+  done <<< "$WIN"
+fi
+HIST=$(( FW + XW ))
+if [ -z "$WIN" ]; then
+  HEALTH=FAIR            # no prior sprint → conservative; design weighting not yet earned
+elif [ "$HIST" -ge 3 ]; then
+  HEALTH=POOR
+elif [ "$HIST" -ge 1 ]; then
+  HEALTH=FAIR
+else
+  HEALTH=HEALTHY         # prior sprints existed and were clean
+fi
+[ "$HEALTH" = "HEALTHY" ] && POSTURE=WEIGHTED || POSTURE=ADVISORY
+emit RECON design_posture_set "functionalHealth=$HEALTH designPosture=$POSTURE (window=last2sprints Fw=$FW Xw=$XW)" success
+
 # --- Write the ## Lead & gate mapping and ## Capabilities sections in repo-knowledge.md ---
 # replace_section <file> <header> <body-text>
 # Splices <body-text> in under <header>, replacing the existing section body up to the next
@@ -230,6 +326,13 @@ CAPABILITIES="$(cat <<EOF
 - adapter.capabilities.metaswarm: $METASWARM (yes → may route the adversarial gate through metaswarm; no → bundled flow)
 - adapter.capabilities.bugsweep: $BUGSWEEP (yes → may run a deep bug-hunt pass in REVIEW; no → skip)
 - adapter.capabilities.tracker: $TRACKER
+- adapter.skills.design.review: ${D_REVIEW:-null}
+- adapter.skills.design.consult: ${D_CONSULT:-null}
+- adapter.skills.design.a11y: ${D_A11Y:-null}
+- adapter.skills.design.frontend: ${D_FRONTEND:-null}
+- adapter.designSystem: ${DS_CANDIDATES:-none detected (design lead establishes baseline)}
+- adapter.health.functionalHealth: $HEALTH (window=last2sprints Fw=$FW Xw=$XW)
+- adapter.health.designPosture: $POSTURE
 - productContext: $PCL_STATUS
 EOF
 )"
@@ -248,6 +351,9 @@ cat <<EOF
   Design lead:       $DESIGN_LEAD   [$DESIGN_SRC]
   Gates resolved:    designReviewer=${GATE_DESIGN:-null} thesisGuardian=${GATE_THESIS:-null} reviewIntegrity=${GATE_INTEGRITY:-null} firstUseCritic=${GATE_FIRSTUSE:-null} qualityControl=${GATE_QC:-null}
   Capabilities:      asyncLoop=$ASYNC_LOOP codex=$CODEX metaswarm=$METASWARM bugsweep=$BUGSWEEP tracker=$TRACKER
+  Design skills:     review=${D_REVIEW:-null} consult=${D_CONSULT:-null} a11y=${D_A11Y:-null} frontend=${D_FRONTEND:-null}
+  Design system:     ${DS_CANDIDATES:-none detected — design lead establishes baseline}
+  Functional health: $HEALTH  →  design posture: $POSTURE
   Product context:   $PCL_STATUS
   Mapping written →  $RK  (## Lead & gate mapping)
 =======================================

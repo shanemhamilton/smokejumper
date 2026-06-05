@@ -86,7 +86,15 @@ orchestrator drives the sprint). It also scaffolds `<target>/.smokejumper/`, so 
   any model floor). Record as `adapter.model.*`.
 - Detect git discipline: submodule layout, branch conventions, merge policy (CI-enforced
   vs. local-green + admin-merge), merge command.
-- Detect design system source of truth: token file, component library, style guide.
+- Detect design-system source-of-truth **candidate paths** → `adapter.designSystem` (token/theme
+  files, Tailwind config, Storybook, `DESIGN.md`). These are hints; the design lead does the
+  authoritative search and writes the durable `## Design system` section in `repo-knowledge.md`
+  (which RECON loads on later sprints). The scan never writes that section.
+- Detect available design skills/plugins → `adapter.skills.design.*` (review, consult, a11y,
+  frontend), and derive a windowed `functionalHealth` → `designPosture` (`adapter.health.*`),
+  emitting a `design_posture_set` event. RECON may adjust the derived health one level for live
+  test/build status it gathers. RECON also surfaces any previously-proven design skills from the
+  `## Design skills` tally in `repo-knowledge.md` as recommendations for this sprint.
 - Detect coverage thresholds file.
 
 The schema for `repo-knowledge.md` is defined in `references/repo-knowledge-schema.md`.
@@ -113,12 +121,14 @@ docs, and the adapter scan output.
 
 **Exit condition:** Compact repo model recorded + detected lead mapping (project-specific
 vs. generic bundled) + `adapter.gate.*` + `adapter.capabilities.*` + `adapter.model.*` +
-git discipline + design system location + coverage thresholds all documented. **The leads
-are established (resolved definitions read/adopted), the "Leads established" banner was
-surfaced, and a `leads_established` event is in `sprint-log.jsonl`. A product-context
-artifact exists (read in Context mode or bootstrapped in Setup mode) and its path is
-recorded under `## Capabilities`.** If `repo-knowledge.md` was present, any prior context
-from it is loaded.
+git discipline + design-system candidates (`adapter.designSystem`) + coverage thresholds all
+documented. `adapter.skills.design.*` + `functionalHealth` / `designPosture` are recorded under
+`## Capabilities` and a `design_posture_set` event is in `sprint-log.jsonl`. Any prior
+`## Design system` section is loaded for the design lead to verify/update when it runs. **The leads are established (resolved
+definitions read/adopted), the "Leads established" banner was surfaced, and a `leads_established`
+event is in `sprint-log.jsonl`. A product-context artifact exists (read in Context mode or
+bootstrapped in Setup mode) and its path is recorded under `## Capabilities`.** If
+`repo-knowledge.md` was present, any prior context from it is loaded.
 
 ---
 
@@ -129,10 +139,17 @@ from it is loaded.
 The detected (or generic bundled) leads autonomously choose the highest-leverage next move
 for the product. The product lead drives this phase. Inputs: RECON's repo model, the
 **product-context artifact established in RECON** (authoritative — read it and quote it; do
-not re-infer product direction from scratch), the issue tracker, and `repo-knowledge.md`. If
-that artifact was generated without a human interview (its header is marked `unverified`),
-treat it as provisional and weight its `[TODO]` gaps accordingly rather than building on
-fabricated certainty.
+not re-infer product direction from scratch), the issue tracker, `repo-knowledge.md`, and the
+`designPosture` RECON recorded under `## Capabilities`. If that artifact was generated without a
+human interview (its header is marked `unverified`), treat it as provisional and weight its
+`[TODO]` gaps accordingly rather than building on fabricated certainty.
+
+**Design posture weighting.** When `designPosture` is `WEIGHTED` (functional health HEALTHY), the
+product lead ranks design-debt / polish / UX-quality objectives higher when choosing what to build
+(per the design-posture rule in `smokejumper-product-lead.md`). When `ADVISORY` (health POOR/FAIR),
+design is taken at face value and functional/correctness objectives win. This affects objective
+**prioritization only** — it never makes a gate blocking, never forces a design-skill invocation,
+and never gates a push.
 
 **Autonomy scope:** The leads decide *what to build*, in what order, and why. Escalate to
 the human **only** for product strategy / budget / release authority — per the
@@ -169,7 +186,9 @@ The leads produce the design and implementation plan:
   microcopy (for user-facing work). Reads the detected design system before touching
   anything — never invents tokens or hue values. If RECON found no design system, the
   design lead documents what baseline it is establishing and records it as a new
-  design-system artifact.
+  design-system artifact. When it invokes a resolved design skill (`adapter.skills.design.*`),
+  it appends a `design_skill_invoked` event to `sprint-log.jsonl` (per `smokejumper-design-lead.md`
+  §3.1) — the producer side of the design-skill effectiveness loop that LESSONS LEARNED scores.
 - The product lead produces the feature spec (problem, goals, non-goals, requirements,
   tracking plan, acceptance criteria, kill condition).
 - The engineering lead decomposes the work into units and assigns each unit a lane and
@@ -362,6 +381,18 @@ off completed milestone tasks, advance the `← ACTIVE` marker if a milestone cl
 shipped items to "Recent Shipped" (hashes from `git log`, never invented), and replace any
 metric value that got a real measurement. Update its `Last updated` / `Last commit captured`
 headers and commit it to the target repo alongside `repo-knowledge.md`.
+
+**(a.2) Score design-skill effectiveness.** For each design skill invoked this sprint (the
+`design_skill_invoked` events in `sprint-log.jsonl`), record its outcome into the `## Design
+skills` tally in `repo-knowledge.md` and emit a `design_skill_outcome` event. Apply the
+**gate-or-ship proxy** score (see `references/lessons-learned.md`): if a design-review gate was
+resolved, +1 when it passed for the informed unit, else 0; if no gate (the common case), +1 when
+the informed unit shipped **this sprint** with no design rework this sprint, else 0. (Scoring uses
+only what is known at Phase 7; if a later sprint redoes the same surface, that sprint revises the
+skill's row down — the tally is update-able.) Persist `functionalHealth` / `designPosture` for the sprint too. This is what lets
+RECON recommend proven design skills next time. The `## Design skills` section is owned here — the
+adapter scan never writes it. If a design-skill recommendation is portable, graduate it via the
+Mode B flow (stream (b) below).
 
 For Lane A, use `choo-choo-ralph:harvest` (if present) to harvest learnings from
 completed molecule children before synthesizing. The orchestrator also synthesizes

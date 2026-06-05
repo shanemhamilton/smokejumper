@@ -22,11 +22,15 @@ Durable, accumulative knowledge for this repo. RECON loads this on arrival; LESS
 
 ## Gate locations
 
+## Design system
+
 ## Lead & gate mapping
 
 ## Model tier
 
 ## Capabilities
+
+## Design skills
 
 ## Known traps
 
