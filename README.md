@@ -64,6 +64,20 @@ Starts a full sprint. SmokeJumper proceeds through all eight phases autonomously
 
 ---
 
+## Running under a Codex (or non-Claude) orchestrator
+
+SmokeJumper is built for Claude Code, but it also runs when a **Codex agent (or any
+file-and-shell capable agent) is the top-level orchestrator** — point the agent at
+`skills/smokejumper/SKILL.md` and have it follow the eight phases. A runtime preflight
+(`references/runtime.md`) detects what your runtime can do and adapts:
+
+- **No subagent dispatch** → leads and reviewers are *adopted inline*: the orchestrator reads the resolved `agents/*.md` persona and acts as that role for the phase. RECON runs `scripts/sj-adapter-scan.sh`, which resolves the leads, writes the mapping into `repo-knowledge.md`, and prints a **"Leads established" banner** — so lead establishment is a visible, durable artifact, not an implicit step.
+- **No Skill tool** → the embedded reference files are used directly. Product context is bootstrapped by `references/product-context.md` + `templates/product-context.md` with **no dependency on any external skill**.
+- **`anthropic-skills:handoff-prompt` unavailable** → Phase 8 writes `<target>/.smokejumper/HANDOFF.md` directly.
+- **`choo-choo-ralph` / `bd` absent** → Lane A is unavailable; all work routes to Lane B (the synchronous crew).
+
+---
+
 ## The 8-phase lifecycle
 
 Full design: [`docs/specs/2026-06-04-smokejumper-framework-design.md`](docs/specs/2026-06-04-smokejumper-framework-design.md)
@@ -85,8 +99,8 @@ flowchart TD
     LL -. write-back .-> FW[("plugin repo<br/>VERSION + CHANGELOG")]
 ```
 
-1. **RECON** — Build a repo model: stack, conventions, gate locations, available tools, and any prior sprint knowledge from `.smokejumper/repo-knowledge.md`.
-2. **DECIDE** — The detected leads choose the highest-leverage next move. No fixed pipeline; they assess the actual state of the product and pick.
+1. **RECON** — Build a repo model: stack, conventions, gate locations, available tools, and any prior sprint knowledge from `.smokejumper/repo-knowledge.md`. A deterministic adapter scan (`sj-adapter-scan.sh`) **establishes the leads** (visible banner + durable mapping), and a product-context bootstrap establishes a PRODUCT_PILOT-style brief — creating one on a brand-new repo where none exists.
+2. **DECIDE** — The established leads choose the highest-leverage next move, reading the product-context artifact from RECON as authoritative. No fixed pipeline; they assess the actual state of the product and pick.
 3. **PLAN** *(front-loaded adversarial gate)* — Design + implementation plan produced, then put through the full adversarial review. PASS here authorizes execution — including any autonomous pour. Bad assumptions and unsafe decompositions are caught here, before hours of coding.
 4. **EXECUTE** *(two lanes)*
    - **Lane A — big pour (async, hours→days):** For large, decomposable, non-safety-critical work. Spec converted into a bead molecule; Codex runs each child at `model_reasoning_effort=high` with per-child mechanical gates (tests, build, lint, coverage). Launched as `nohup ./ralph.sh &` loops that grind autonomously and survive context resets.
@@ -100,12 +114,15 @@ flowchart TD
 
 ## Portability contract
 
-SmokeJumper hard-requires only: a git repo, the Claude Code runtime, and the bundled agents and skill. Everything else is detected and adapted to.
+SmokeJumper hard-requires only: a git repo, and the bundled agents, skill, and scripts. It runs best under the Claude Code runtime (subagent dispatch + skills) but degrades gracefully to inline persona adoption under any other orchestrator — including a Codex agent driving the sprint (see [Running under a Codex orchestrator](#running-under-a-codex-or-non-claude-orchestrator)). Everything else is detected and adapted to.
 
 | Target condition | Behavior |
 |---|---|
 | Has project-specific leads | Adapter prefers them; bundled generics stand down |
 | No project leads | Bundled `smokejumper-{engineering,product,design}-lead` run |
+| Codex (or non-Claude) orchestrator | Inline-adoption mode — leads/reviewers adopted by reading their definition files; embedded references used directly |
+| No product context layer | RECON bootstraps a PRODUCT_PILOT-style brief before DECIDE |
+| Product context layer present | RECON reads it; LESSONS LEARNED updates it |
 | `choo-choo-ralph` installed | Lane A (big pour) available |
 | `choo-choo-ralph` absent | `choo-choo-ralph:install` offered; else Lane-B-only; gap logged |
 | Issue tracker present (beads, etc.) | Used for durable state |
@@ -139,10 +156,13 @@ agents/
   smokejumper-design-lead.md
 skills/smokejumper/
   SKILL.md               # 8-phase orchestrator (the /smokejumper entry point)
-  references/            # adapter, recon, gated-pour, self-healing, schema, lessons-learned
+  references/            # runtime, recon, adapter, product-context, gated-pour, self-healing, schema, lessons-learned
   agents/openai.yaml     # Codex skill-discovery metadata
+  templates/
+    product-context.md   # embedded PRODUCT_PILOT-style brief (no external skill needed)
   scripts/
     sj-init.sh           # scaffolds <target>/.smokejumper/ (idempotent)
+    sj-adapter-scan.sh   # deterministic lead/gate/capability scan → mapping + banner + events
     sj-version-check.sh  # non-blocking update check, run at sprint start
 docs/specs/              # design spec
 CHANGELOG.md

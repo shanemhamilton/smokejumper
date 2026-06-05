@@ -45,7 +45,14 @@ repo; per-repo learnings and `.smokejumper/` files go to the target repo.
 
 ## Phase 1 — RECON
 
-**Load:** `references/recon.md`, `references/adapter.md`, `references/repo-knowledge-schema.md`
+**Load:** `references/runtime.md`, `references/recon.md`, `references/adapter.md`, `references/repo-knowledge-schema.md`, `references/product-context.md`
+
+**Runtime preflight (first).** Per `references/runtime.md`, self-identify your runtime and
+pick the execution mode: can you dispatch subagents, and can you invoke the Skill tool? If
+not — e.g. a Codex agent is the top-level orchestrator — run in **inline-adoption mode**:
+adopt lead and reviewer personas by reading their definition files, and use the embedded
+reference files directly. Record the runtime in the RECON summary and `sprint-log.jsonl`.
+Never block on a subagent dispatch or Skill-tool call your runtime cannot make.
 
 Build a compact repo model using the whole-repo architecture approach defined in
 `references/recon.md`. Read `CLAUDE.md` or `AGENTS.md` and any equivalent project-memory
@@ -53,7 +60,14 @@ files, product docs, and the issue tracker (if present). Load
 `<target>/.smokejumper/repo-knowledge.md` if a prior drop left one — this is the
 accumulated institutional knowledge from all previous sprints on this repo.
 
-Run the adapter scan defined in `references/adapter.md`:
+Run the deterministic adapter scan — `scripts/sj-adapter-scan.sh <target>` — which
+implements the detection specified in `references/adapter.md`. It resolves the items below,
+writes `## Lead & gate mapping` + `## Capabilities` into `repo-knowledge.md`, emits
+`agent_resolved` / `capability_*` / `leads_established` events to `sprint-log.jsonl`, and
+prints a **"Leads established" banner**. Running the script is mandatory — it converts lead
+resolution from a remembered step into a visible, durable artifact (critical when a Codex
+orchestrator drives the sprint). It also scaffolds `<target>/.smokejumper/`, so a separate
+`sj-init.sh` run is not required. The scan resolves:
 
 - Detect project-specific leads (patterns: `*-product-lead`, `*-engineering-lead`,
   `*-design-*`, design reviewer or director gate patterns). When a project-specific lead
@@ -73,9 +87,21 @@ Run the adapter scan defined in `references/adapter.md`:
 - Detect design system source of truth: token file, component library, style guide.
 - Detect coverage thresholds file.
 
-Run `scripts/sj-init.sh <target>` to scaffold `<target>/.smokejumper/` if it does not
-already exist. The schema for `repo-knowledge.md` is defined in
-`references/repo-knowledge-schema.md`.
+The schema for `repo-knowledge.md` is defined in `references/repo-knowledge-schema.md`.
+(`scripts/sj-init.sh` remains a standalone way to scaffold `<target>/.smokejumper/`.)
+
+**Establish the leads.** Resolving names is not the same as establishing leads. Per
+`references/runtime.md`, a lead is not established until its resolved definition file has
+been read and adopted (or dispatched as a subagent, if your runtime supports it). Read the
+resolved product / engineering / design lead definitions before DECIDE, and surface the
+"Leads established" banner the scan printed.
+
+**Bootstrap product context.** Run the product-context step per
+`references/product-context.md`: detect whether a product context layer already exists; if
+it does, read it (Context mode); if none exists — the brand-new-repo case — establish one
+(Setup mode) before DECIDE, write the durable artifact, and record its path under
+`## Capabilities` in `repo-knowledge.md`. On a greenfield repo this is the most important
+RECON output: there is little code to model, so product context is what DECIDE runs on.
 
 Record everything as a compact repo model — enough to inform DECIDE and to route gates
 and lanes in EXECUTE. Do not read every source file; read CLAUDE.md, key architecture
@@ -83,8 +109,12 @@ docs, and the adapter scan output.
 
 **Exit condition:** Compact repo model recorded + detected lead mapping (project-specific
 vs. generic bundled) + `adapter.gate.*` + `adapter.capabilities.*` + `adapter.model.*` +
-git discipline + design system location + coverage thresholds all documented. If
-`repo-knowledge.md` was present, any prior context from it is loaded.
+git discipline + design system location + coverage thresholds all documented. **The leads
+are established (resolved definitions read/adopted), the "Leads established" banner was
+surfaced, and a `leads_established` event is in `sprint-log.jsonl`. A product-context
+artifact exists (read in Context mode or bootstrapped in Setup mode) and its path is
+recorded under `## Capabilities`.** If `repo-knowledge.md` was present, any prior context
+from it is loaded.
 
 ---
 
@@ -94,8 +124,11 @@ git discipline + design system location + coverage thresholds all documented. If
 
 The detected (or generic bundled) leads autonomously choose the highest-leverage next move
 for the product. The product lead drives this phase. Inputs: RECON's repo model, the
-product docs, the issue tracker, and `repo-knowledge.md`. If no product docs exist, infer
-product direction from RECON's architectural model, the README, and the issue tracker.
+**product-context artifact established in RECON** (authoritative — read it and quote it; do
+not re-infer product direction from scratch), the issue tracker, and `repo-knowledge.md`. If
+that artifact was generated without a human interview (its header is marked `unverified`),
+treat it as provisional and weight its `[TODO]` gaps accordingly rather than building on
+fabricated certainty.
 
 **Autonomy scope:** The leads decide *what to build*, in what order, and why. Escalate to
 the human **only** for product strategy / budget / release authority — per the
@@ -301,6 +334,13 @@ what was discovered, what traps were found, what gate patterns apply to this rep
 `<target>/.smokejumper/repo-knowledge.md` in place (schema:
 `references/repo-knowledge-schema.md`). Commit the enriched file to the target repo.
 
+**(a.1) Update the product context.** Per `references/product-context.md` (Update mode),
+reflect what shipped back into the product-context artifact established/read in RECON: check
+off completed milestone tasks, advance the `← ACTIVE` marker if a milestone closed, add
+shipped items to "Recent Shipped" (hashes from `git log`, never invented), and replace any
+metric value that got a real measurement. Update its `Last updated` / `Last commit captured`
+headers and commit it to the target repo alongside `repo-knowledge.md`.
+
 For Lane A, use `choo-choo-ralph:harvest` (if present) to harvest learnings from
 completed molecule children before synthesizing. The orchestrator also synthesizes
 synchronous-lane learnings.
@@ -369,8 +409,10 @@ without re-running RECON.
 
 ## Portability contract
 
-SmokeJumper hard-requires only: a git repo, the Claude Code runtime, and the bundled
-agents + skill. Everything else is detected in RECON and adapted to.
+SmokeJumper hard-requires only: a git repo and the bundled agents + skill + scripts. It runs
+best under the Claude Code runtime (subagent dispatch + skills) and degrades to inline persona
+adoption under any other orchestrator — including a Codex agent driving the sprint
+(`references/runtime.md`). Everything else is detected in RECON and adapted to.
 
 | Target condition | SmokeJumper behavior |
 |---|---|
@@ -383,13 +425,18 @@ agents + skill. Everything else is detected in RECON and adapted to.
 | Missing specialist agent | Self-heal: author into target `.claude/agents/` + log gap |
 | Has `CLAUDE.md` / `AGENTS.md` | RECON honors its rules as defaults |
 | Multiple execution frameworks detected | Ask human which to use — never auto-select |
+| Codex agent (or non-Claude) is the orchestrator | Inline-adoption mode: leads + reviewers adopted by reading their definition files; embedded references used directly (`references/runtime.md`) |
+| No product context layer | RECON bootstraps one before DECIDE (`references/product-context.md`) |
+| Product context layer present | RECON reads it (Context mode); LESSONS LEARNED updates it |
 
 ---
 
 ## References
 
+- `references/runtime.md` — adopt-vs-dispatch role model + runtime preflight (loaded first in RECON)
 - `references/recon.md` — whole-repo architecture modeling (used in RECON)
-- `references/adapter.md` — naming-convention lead + capability detection (used in RECON)
+- `references/adapter.md` — naming-convention lead + capability detection, implemented by `scripts/sj-adapter-scan.sh` (used in RECON)
+- `references/product-context.md` — embedded product-context bootstrap (Context/Setup/Update), with `templates/product-context.md` (used in RECON, DECIDE, LESSONS LEARNED)
 - `references/repo-knowledge-schema.md` — schema for `<target>/.smokejumper/repo-knowledge.md` (used in RECON + LESSONS LEARNED)
 - `references/gated-pour.md` — spec→pour→formula→launch→monitor→harvest flow (used in EXECUTE)
 - `references/self-healing.md` — author-a-missing-agent protocol (used in EXECUTE)

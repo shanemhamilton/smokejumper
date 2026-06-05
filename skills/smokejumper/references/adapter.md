@@ -4,8 +4,23 @@ The adapter layer runs during RECON (Phase 1) and resolves two things:
 1. **Lead agents and gate roles** — who runs each phase and each review gate
 2. **Capabilities** — which tools and orchestration primitives are available
 
-SmokeJumper hard-requires only a git repo, the Claude Code runtime, and the bundled
-agents + skill. Everything else is detected and adapted to.
+SmokeJumper hard-requires only a git repo and the bundled agents + skill + scripts. It runs
+best under the Claude Code runtime (subagent dispatch + skills) but degrades to inline
+persona adoption under any other orchestrator (e.g. a Codex agent) — see
+`references/runtime.md`. Everything else is detected and adapted to.
+
+**Executable implementation.** The detection described in this file is implemented by
+`scripts/sj-adapter-scan.sh`, which RECON runs. Running the script — rather than performing
+the scan from memory — is what makes lead establishment a *visible, durable* artifact: it
+writes the resolved mapping into `repo-knowledge.md`, emits `agent_resolved` /
+`capability_*` / `leads_established` events to `sprint-log.jsonl`, and prints a "Leads
+established" banner. This file is the human-readable spec the script implements; keep the
+two in sync.
+
+**Leads are personas, not mandatory subagents.** Resolving a lead name is step one;
+*establishing* it means reading its definition file and adopting it (or dispatching it as a
+subagent, where the runtime supports that) — see `references/runtime.md`. The adapter
+resolves names; the orchestrator establishes the roles.
 
 ---
 
