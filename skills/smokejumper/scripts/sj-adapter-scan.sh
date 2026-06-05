@@ -144,9 +144,11 @@ plugin_present() {
 }
 has_ralph() { command -v ralph >/dev/null 2>&1 || plugin_present choo-choo-ralph; }
 has_metaswarm() { plugin_present metaswarm; }
+has_bugsweep() { plugin_present bugsweep; }
 cap "async loop tool (choo-choo-ralph)" has_ralph;      ASYNC_LOOP="$CAP_RESULT"
 cap "Codex CLI"                          command -v codex; CODEX="$CAP_RESULT"
 cap "metaswarm (adversarial-gate backend)" has_metaswarm; METASWARM="$CAP_RESULT"
+cap "bugsweep (deep bug-hunt backend)"   has_bugsweep; BUGSWEEP="$CAP_RESULT"
 cap "issue tracker: beads (bd)"          command -v bd;    BD="$CAP_RESULT"
 TRACKER="none"
 [ "$BD" = "yes" ] && TRACKER="beads"
@@ -226,6 +228,7 @@ CAPABILITIES="$(cat <<EOF
 - adapter.capabilities.asyncLoop: $ASYNC_LOOP (Lane A $([ "$ASYNC_LOOP" = yes ] && echo available || echo unavailable → all work Lane B))
 - adapter.capabilities.codex: $CODEX
 - adapter.capabilities.metaswarm: $METASWARM (yes → may route the adversarial gate through metaswarm; no → bundled flow)
+- adapter.capabilities.bugsweep: $BUGSWEEP (yes → may run a deep bug-hunt pass in REVIEW; no → skip)
 - adapter.capabilities.tracker: $TRACKER
 - productContext: $PCL_STATUS
 EOF
@@ -244,7 +247,7 @@ cat <<EOF
   Engineering lead:  $ENG_LEAD   [$ENG_SRC]
   Design lead:       $DESIGN_LEAD   [$DESIGN_SRC]
   Gates resolved:    designReviewer=${GATE_DESIGN:-null} thesisGuardian=${GATE_THESIS:-null} reviewIntegrity=${GATE_INTEGRITY:-null} firstUseCritic=${GATE_FIRSTUSE:-null} qualityControl=${GATE_QC:-null}
-  Capabilities:      asyncLoop=$ASYNC_LOOP codex=$CODEX metaswarm=$METASWARM tracker=$TRACKER
+  Capabilities:      asyncLoop=$ASYNC_LOOP codex=$CODEX metaswarm=$METASWARM bugsweep=$BUGSWEEP tracker=$TRACKER
   Product context:   $PCL_STATUS
   Mapping written →  $RK  (## Lead & gate mapping)
 =======================================

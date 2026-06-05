@@ -38,16 +38,34 @@
       "absentBehavior": "Use SmokeJumper's bundled adversarial review flow (the default). No functional loss; metaswarm only enriches the gate when installed under a Skill-tool-capable runtime."
     },
     {
+      "id": "bugsweep",
+      "kind": "backend",
+      "required": false,
+      "purpose": "Optional deep adversarial bug-hunt (Hunter -> Skeptic -> Referee) run in REVIEW before push, complementary to the correctness/gate review. Finds runtime behavioral bugs across the change.",
+      "source": {
+        "type": "github-release",
+        "repo": "shanemhamilton/bugsweep"
+      },
+      "detect": {
+        "skillDir": "bugsweep",
+        "skillPrefix": "bugsweep"
+      },
+      "pin": "0.3.1",
+      "tested": null,
+      "absentBehavior": "Skip the bugsweep pass; the adapter/bundled adversarial review gate is the review of record. No functional loss."
+    },
+    {
       "id": "anthropic-skills:handoff-prompt",
       "kind": "skill",
       "required": false,
-      "purpose": "Phase 8 HANDOFF \u2014 high-fidelity handoff prompt generation.",
+      "purpose": "Phase 8 HANDOFF \u2014 high-fidelity handoff prompt generation (Shane's handoff-prompt-skill, also distributed via the 'anthropic-skills' marketplace).",
       "source": {
-        "type": "manual",
-        "note": "Community 'anthropic-skills' marketplace plugin; canonical repo not yet recorded. Fill source.repo when known to enable auto version-check."
+        "type": "github-release",
+        "repo": "shanemhamilton/handoff-prompt-skill"
       },
       "detect": {
-        "skillPrefix": "anthropic-skills:handoff-prompt"
+        "skillPrefix": "anthropic-skills:handoff-prompt",
+        "skillDir": "handoff-prompt-skill"
       },
       "pin": null,
       "tested": null,

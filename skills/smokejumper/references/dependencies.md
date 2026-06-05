@@ -18,6 +18,7 @@ JSON) and every consumer picks it up.
 |---|---|---|---|
 | `choo-choo-ralph` | backend | no | Lane A async "big pour" engine |
 | `metaswarm` | backend | no | optional cross-model adversarial gate + PR shepherd |
+| `bugsweep` | backend | no | optional deep bug-hunt (Hunter→Skeptic→Referee) in REVIEW |
 | `anthropic-skills:handoff-prompt` | skill | no | Phase 8 handoff (has built-in fallback) |
 | `product-pilot` | vendored | no | product-context layer (embedded, re-synced from upstream) |
 | `beads` (`bd`) | tracker | no | git-native issue tracker + choo-choo's store |

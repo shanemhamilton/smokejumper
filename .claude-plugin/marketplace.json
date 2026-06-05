@@ -12,7 +12,7 @@
       "name": "smokejumper",
       "source": "./",
       "description": "Drop-in autonomous product-development crew.",
-      "version": "0.7.0"
+      "version": "0.8.0"
     }
   ]
 }

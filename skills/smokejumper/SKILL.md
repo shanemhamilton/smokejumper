@@ -283,6 +283,12 @@ and metaswarm is absent, the bundled SmokeJumper flow applies: quality/correctne
 → review-integrity (anti-sycophancy) gate. For user-facing changes, prepend: design
 reviewer → first-impression/first-use critic (if `adapter.gate.*` declares one).
 
+**Optional deep bug-hunt.** If `adapter.capabilities.bugsweep` is `yes`, you MAY run a
+`bugsweep` pass over the change before push — a deep adversarial bug-hunt (Hunter → Skeptic →
+Referee) that complements the correctness reviewer by finding runtime behavioral bugs. Treat
+its *confirmed* findings as blockers to fix before the marker is created; it is additive,
+never a replacement for the gate. Absent → skip, no functional loss.
+
 The engineering lead creates the `.adversarial-review-passed` marker (or the project's
 equivalent) only after confirming every applicable gate obligation is met. No other agent
 or sub-agent creates it for their own work.
@@ -438,6 +444,8 @@ adoption under any other orchestrator — including a Codex agent driving the sp
 | `choo-choo-ralph` absent | Offer install; else Lane-B-only; record gap |
 | `metaswarm` installed (Claude Code) | Adversarial gate may route through metaswarm (precedence: project gates → metaswarm → bundled) |
 | `metaswarm` absent or non-Claude runtime | Bundled adversarial review flow — no functional loss |
+| `bugsweep` installed | Optional deep bug-hunt pass in REVIEW before push |
+| `bugsweep` absent | Skip the bug-hunt pass — no functional loss |
 | Issue tracker present | Use it for durable state (tracker item per phase) |
 | No issue tracker | State lives in `<target>/.smokejumper/` only |
 | Missing specialist agent | Self-heal: author into target `.claude/agents/` + log gap |

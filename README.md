@@ -173,8 +173,9 @@ reimplementing them. The set is declared in `skills/smokejumper/references/depen
 |---|---|---|
 | [choo-choo-ralph](https://github.com/mj-meyer/choo-choo-ralph) | Lane A async "big pour" engine | optional backend |
 | [metaswarm](https://github.com/dsifry/metaswarm) | optional adversarial-gate backend (cross-model gates, PR shepherd) | optional backend |
+| [bugsweep](https://github.com/shanemhamilton/bugsweep) | optional deep bug-hunt (Hunter→Skeptic→Referee) in REVIEW | optional backend |
 | [product-pilot](https://github.com/shanemhamilton/product-pilot) | product-context layer | **vendored** (embedded, re-synced from upstream) |
-| anthropic-skills:handoff-prompt | Phase 8 handoff | optional (built-in fallback) |
+| [handoff-prompt-skill](https://github.com/shanemhamilton/handoff-prompt-skill) | Phase 8 handoff | optional (built-in fallback) |
 | Beads (`bd`) · Codex CLI · `gh` | tracker / exec / tracker-fallback | optional, adapter-detected |
 
 Only **git** and **one of** Claude Code or Codex are hard-required; every dependency above

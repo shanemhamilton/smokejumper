@@ -4,6 +4,13 @@ All notable changes to SmokeJumper are documented here. Format: [Keep a Changelo
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-06-04
+### Added
+- **bugsweep wired in as an optional REVIEW-phase backend** ([shanemhamilton/bugsweep](https://github.com/shanemhamilton/bugsweep), pinned 0.3.1). When detected (`adapter.capabilities.bugsweep`), Phase 5 REVIEW may run a deep adversarial bug-hunt (Hunter → Skeptic → Referee) over the change before push; confirmed findings are blockers to fix, additive to the gate, never a replacement. Absent → skipped, no functional loss. Added to the dependency manifest, adapter detection, and portability contract.
+
+### Changed
+- **`anthropic-skills:handoff-prompt` now tracks its real upstream** ([shanemhamilton/handoff-prompt-skill](https://github.com/shanemhamilton/handoff-prompt-skill)) instead of being marked `manual` in the dependency manifest. It tracks silently until the repo cuts its first release/tag.
+
 ## [0.7.0] - 2026-06-04
 ### Added
 - **Declared dependency manifest** (`skills/smokejumper/references/dependencies.json` + `dependencies.md`). The projects SmokeJumper composes — choo-choo-ralph, metaswarm, product-pilot (vendored), anthropic-skills:handoff-prompt, Beads, Codex, gh — are now explicit and trackable, each with `kind` / `source` / `detect` / `pin` / `absentBehavior`. Adding a dependency is one JSON entry; the adapter and the dependency check both read this single source of truth.
