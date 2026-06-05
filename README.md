@@ -90,7 +90,10 @@ Two RECON outputs are durable, visible artifacts rather than steps an orchestrat
   Engineering lead:  smokejumper-engineering-lead   [BUNDLED]
   Design lead:       smokejumper-design-lead   [BUNDLED]
   Gates resolved:    designReviewer=null thesisGuardian=null reviewIntegrity=null firstUseCritic=null qualityControl=null
-  Capabilities:      asyncLoop=no codex=yes tracker=beads
+  Capabilities:      asyncLoop=no codex=yes metaswarm=no bugsweep=no tracker=beads
+  Design skills:     review=design-review consult=design-consultation a11y=accessibility-wcag frontend=frontend-design (plugin)
+  Design system:     tailwind.config.js,src/theme.css,.storybook/
+  Functional health: HEALTHY  →  design posture: WEIGHTED
   Product context:   MISSING — run Setup before DECIDE
 =======================================
 ```
@@ -104,6 +107,20 @@ A lead is a **persona**, not a mandatory subagent: the orchestrator establishes 
 - **Update mode** — LESSONS LEARNED reflects shipped work back into it.
 
 The bootstrap is fully self-contained (`references/product-context.md` + `templates/product-context.md`) with **no dependency on any external skill**, and it never fabricates: unknown metrics, competitors, and milestones are marked `[TODO]`, and an autonomous run with no human to interview stamps the artifact `unverified`.
+
+---
+
+## Design strength
+
+SmokeJumper treats design as a first-class concern that **scales with functional health** — design is taken at face value while a repo is still stabilizing, and weighted more heavily once the fundamentals are solid. Four mechanisms, all visible and durable like everything else:
+
+**Functional-health-gated weighting.** The adapter scan derives a **windowed** `functionalHealth` (`POOR | FAIR | HEALTHY`, from gate/outcome failures over the last 2 sprints) and maps it to a `designPosture` (`ADVISORY | WEIGHTED`). DECIDE reads it: when `WEIGHTED`, the product lead ranks design-debt / polish / UX objectives higher; when `ADVISORY`, functional work wins. The signal is **windowed, not cumulative** — so it *recovers*: design gets weighted once functional issues are actually addressed, not blocked forever by one rough sprint. This affects objective *prioritization only* — never gating, never a forced skill invocation.
+
+**Design-system discovery + a durable model.** The scan surfaces design-system source-of-truth **candidate paths** (`adapter.designSystem` — Tailwind config, theme files, tokens, Storybook, `DESIGN.md`). The **design lead then searches the repo/code itself**, identifies the real source of truth, and records it — token/theme paths, color/spacing/type scales, component library, UI conventions — into a durable `## Design system` section of `repo-knowledge.md` that every later sprint inherits and verifies. No design is produced without the system in hand; no token, hue, or spacing value is ever invented.
+
+**Real design skills, in both runtimes.** The scan detects installed design tooling (`adapter.skills.design.review|consult|a11y|frontend`) by scanning `~/.claude/skills/`, gstack, and installed plugins. The design lead resolves through these adapter keys — never a hardcoded name — invoking them via the native Skill tool under Claude Code, or by reading the skill's `SKILL.md` inline under Codex (where the Skill tool is absent). The two non-negotiables — design critique and a WCAG 2.2 AA accessibility check — run by skill if present, by hand if not.
+
+**It learns which skills work.** Each design-skill invocation is scored (a gate-or-ship proxy) into an append-only `## Design skills` tally in `repo-knowledge.md`; RECON surfaces the proven ones as recommendations next sprint, and portable recommendations graduate upstream through the same Mode B contribution flow. The `## Design system` and `## Design skills` sections are **agent-owned** — the adapter scan records detection into `## Capabilities` but never clobbers either accumulated section.
 
 ---
 
@@ -128,15 +145,15 @@ flowchart TD
     LL -. write-back .-> FW[("plugin repo<br/>VERSION + CHANGELOG")]
 ```
 
-1. **RECON** — Build a repo model: stack, conventions, gate locations, available tools, and any prior sprint knowledge from `.smokejumper/repo-knowledge.md`. A deterministic adapter scan (`sj-adapter-scan.sh`) **establishes the leads** (visible banner + durable mapping), and a product-context bootstrap establishes a PRODUCT_PILOT-style brief — creating one on a brand-new repo where none exists.
-2. **DECIDE** — The established leads choose the highest-leverage next move, reading the product-context artifact from RECON as authoritative. No fixed pipeline; they assess the actual state of the product and pick.
+1. **RECON** — Build a repo model: stack, conventions, gate locations, available tools, and any prior sprint knowledge from `.smokejumper/repo-knowledge.md`. A deterministic adapter scan (`sj-adapter-scan.sh`) **establishes the leads** (visible banner + durable mapping), detects design skills + design-system candidates, derives `functionalHealth` → `designPosture`, and a product-context bootstrap establishes a PRODUCT_PILOT-style brief — creating one on a brand-new repo where none exists.
+2. **DECIDE** — The established leads choose the highest-leverage next move, reading the product-context artifact from RECON as authoritative. When `designPosture` is `WEIGHTED`, design-debt and polish objectives rank higher. No fixed pipeline; they assess the actual state of the product and pick.
 3. **PLAN** *(front-loaded adversarial gate)* — Design + implementation plan produced, then put through the full adversarial review. PASS here authorizes execution — including any autonomous pour. Bad assumptions and unsafe decompositions are caught here, before hours of coding.
 4. **EXECUTE** *(two lanes)*
    - **Lane A — big pour (async, hours→days):** For large, decomposable, non-safety-critical work. Spec converted into a bead molecule; Codex runs each child at `model_reasoning_effort=high` with per-child mechanical gates (tests, build, lint, coverage). Launched as `nohup ./ralph.sh &` loops that grind autonomously and survive context resets.
    - **Lane B — synchronous crew (in-session):** For novel, architectural, design-sensitive, or safety-critical units. Engineering Lead dispatches Claude + Codex directly through the full adversarial flow to merged+pushed.
 5. **REVIEW** — Lane B gets full adversarial review before push. Lane A children have per-child mechanical gates baked into the formula; milestone spot-checks sample the autonomous batch.
 6. **INTEGRATE** — Commit and push. Merging ≠ deploying; releases need explicit human greenlight.
-7. **LESSONS LEARNED** *(dual write-back)* — Learnings flow into two places: (a) `<target>/.smokejumper/repo-knowledge.md` committed to the target repo; (b) if a portable improvement was found, a versioned commit to this plugin repo with a `CHANGELOG.md` entry.
+7. **LESSONS LEARNED** *(dual write-back)* — Learnings flow into two places: (a) `<target>/.smokejumper/repo-knowledge.md` committed to the target repo — including design-skill effectiveness scored into the `## Design skills` tally; (b) if a portable improvement was found, a versioned commit to this plugin repo with a `CHANGELOG.md` entry.
 8. **HANDOFF** — Clean handoff prompt so the next session resumes with zero lost context. When Lane A loops are still running, the handoff carries them explicitly.
 
 ---
@@ -152,6 +169,9 @@ SmokeJumper hard-requires only: a git repo, and the bundled agents, skill, and s
 | Codex (or non-Claude) orchestrator | Inline-adoption mode — leads/reviewers adopted by reading their definition files; embedded references used directly |
 | No product context layer | RECON bootstraps a PRODUCT_PILOT-style brief before DECIDE |
 | Product context layer present | RECON reads it; LESSONS LEARNED updates it |
+| Design system present in repo | Design lead finds it, records the durable `## Design system` model; never invents tokens |
+| Design skills installed (gstack, frontend-design, …) | Detected → `adapter.skills.design.*`; invoked via Skill tool (Claude) or inline `SKILL.md` (Codex); effectiveness learned over sprints |
+| Functional health HEALTHY vs. POOR/FAIR | `designPosture` WEIGHTED vs. ADVISORY — design-debt prioritized in DECIDE accordingly (recoverable, windowed) |
 | `choo-choo-ralph` installed | Lane A (big pour) available |
 | `choo-choo-ralph` absent | `choo-choo-ralph:install` offered; else Lane-B-only; gap logged |
 | Issue tracker present (beads, etc.) | Used for durable state |
