@@ -41,24 +41,37 @@ ROOTS=()
 [ -d "$TARGET/.claude/agents" ] && ROOTS+=("$TARGET/.claude/agents")
 [ -d "$HOME/.claude/agents" ] && ROOTS+=("$HOME/.claude/agents")
 
-# resolve_role <case-insensitive extended-regex over the filename>
-# Echoes the resolved agent name (the file's basename without .md) of the first match,
-# searching target agents before global agents. Echoes nothing if no match.
-resolve_role() {
-  local pattern="$1" root f base
-  for root in "${ROOTS[@]:-}"; do
-    [ -d "$root" ] || continue
-    for f in "$root"/*.md; do
-      [ -e "$f" ] || continue
-      base="$(basename "$f" .md)"
-      if printf '%s' "$base" | grep -Eiq "$pattern"; then
-        printf '%s' "$base"
-        return 0
-      fi
-    done
+# _match_in_dir <dir> <regex> — echoes the basename of the first *.md whose name matches.
+_match_in_dir() {
+  local root="$1" pattern="$2" f base
+  [ -d "$root" ] || return 0
+  for f in "$root"/*.md; do
+    [ -e "$f" ] || continue
+    base="$(basename "$f" .md)"
+    if printf '%s' "$base" | grep -Eiq "$pattern"; then printf '%s' "$base"; return 0; fi
   done
   return 0
 }
+
+# resolve_role <regex> — searches the target repo's .claude/agents first, then
+# ~/.claude/agents (globally installed agents). For leads and generic implementers, where a
+# globally installed agent is plausibly intentional and a safe bundled fallback exists.
+resolve_role() {
+  local pattern="$1" root match
+  for root in "${ROOTS[@]:-}"; do
+    match="$(_match_in_dir "$root" "$pattern")"
+    [ -n "$match" ] && { printf '%s' "$match"; return 0; }
+  done
+  return 0
+}
+
+# resolve_role_target_only <regex> — searches ONLY the target repo's .claude/agents, never
+# the global dir. Used for GATE ROLES and SAFETY/INVARIANT GUARDIANS: a gate or guardian
+# must have this project's context. Pulling a foreign project's named gate/guardian out of
+# ~/.claude/agents is misleading (adapter.md: a weak/foreign challenger is worse than none)
+# and, for a guardian, unsafe — absent must mean "route to the human", not "borrow a
+# stranger's guardian".
+resolve_role_target_only() { _match_in_dir "$TARGET/.claude/agents" "$1"; }
 
 # JSON string escaper (backslash + double-quote only; details are kept simple by design).
 json_escape() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
@@ -94,16 +107,17 @@ emit RECON agent_resolved "design lead: $DESIGN_LEAD ($DESIGN_SRC)"
 # --- Resolve implementation / specialist agents (bundled-generic fallback) ---------------
 UI_IMPL="$(resolve_role 'ios|frontend|(^|-)ui(-|$)|web')"
 BACKEND_IMPL="$(resolve_role 'backend|api|server')"
-SAFETY_GUARD="$(resolve_role 'safety|guardian|invariant')"
 DATA_AUDIT="$(resolve_role 'audit|catalog|(^|-)data(-|$)')"
 L10N_REVIEW="$(resolve_role 'localization|l10n|translation')"
+# Guardians are target-only: a foreign guardian must NOT silence the safety routing.
+SAFETY_GUARD="$(resolve_role_target_only 'safety|guardian|invariant')"
 
-# --- Resolve gate roles (null = skip; gates are never fabricated) ------------------------
-GATE_DESIGN="$(resolve_role 'design-reviewer')"
-GATE_THESIS="$(resolve_role 'thesis')"
-GATE_INTEGRITY="$(resolve_role 'review-integrity|sycophancy')"
-GATE_FIRSTUSE="$(resolve_role 'first-impression|first-use')"
-GATE_QC="$(resolve_role 'quality-control|(^|-)qc(-|$)')"
+# --- Resolve gate roles (target-only; null = skip; gates are never fabricated) -----------
+GATE_DESIGN="$(resolve_role_target_only 'design-reviewer')"
+GATE_THESIS="$(resolve_role_target_only 'thesis')"
+GATE_INTEGRITY="$(resolve_role_target_only 'review-integrity|sycophancy')"
+GATE_FIRSTUSE="$(resolve_role_target_only 'first-impression|first-use')"
+GATE_QC="$(resolve_role_target_only 'quality-control|(^|-)qc(-|$)')"
 
 for pair in "designReviewer:$GATE_DESIGN" "thesisGuardian:$GATE_THESIS" \
             "reviewIntegrity:$GATE_INTEGRITY" "firstUseCritic:$GATE_FIRSTUSE" \
@@ -127,6 +141,26 @@ TRACKER="none"
 [ "$BD" = "yes" ] && TRACKER="beads"
 if [ "$TRACKER" = "none" ] && command -v gh >/dev/null 2>&1 && gh issue list >/dev/null 2>&1; then
   TRACKER="github"; emit RECON capability_detected "issue tracker: GitHub Issues"
+fi
+
+# --- Product context layer detection -----------------------------------------------------
+# The Setup interview itself needs an agent, but DETECTION must be deterministic and visible
+# so a Codex orchestrator that skims prose steps cannot silently skip product context. A
+# MISSING result is a durable signal (banner + event + repo-knowledge) that Setup is owed —
+# the same guarantee lead establishment gets.
+PCL_PATH=""
+for cand in "docs/product/PRODUCT_PILOT.md" "PRODUCT.md" ".smokejumper/product-context.md"; do
+  if [ -f "$TARGET/$cand" ]; then PCL_PATH="$cand"; break; fi
+done
+if [ -z "$PCL_PATH" ] && [ -d "$TARGET/docs/product" ] && ls "$TARGET/docs/product"/*.md >/dev/null 2>&1; then
+  PCL_PATH="docs/product/"
+fi
+if [ -n "$PCL_PATH" ]; then
+  PCL_STATUS="present: $PCL_PATH (read it — Context mode)"
+  emit RECON capability_detected "product context layer: $PCL_PATH"
+else
+  PCL_STATUS="MISSING — run Setup (references/product-context.md) before DECIDE"
+  emit RECON capability_absent "product context layer MISSING — Setup required before DECIDE"
 fi
 
 # --- Write the ## Lead & gate mapping and ## Capabilities sections in repo-knowledge.md ---
@@ -181,6 +215,7 @@ CAPABILITIES="$(cat <<EOF
 - adapter.capabilities.asyncLoop: $ASYNC_LOOP (Lane A $([ "$ASYNC_LOOP" = yes ] && echo available || echo unavailable → all work Lane B))
 - adapter.capabilities.codex: $CODEX
 - adapter.capabilities.tracker: $TRACKER
+- productContext: $PCL_STATUS
 EOF
 )"
 
@@ -198,6 +233,7 @@ cat <<EOF
   Design lead:       $DESIGN_LEAD   [$DESIGN_SRC]
   Gates resolved:    designReviewer=${GATE_DESIGN:-null} thesisGuardian=${GATE_THESIS:-null} reviewIntegrity=${GATE_INTEGRITY:-null} firstUseCritic=${GATE_FIRSTUSE:-null} qualityControl=${GATE_QC:-null}
   Capabilities:      asyncLoop=$ASYNC_LOOP codex=$CODEX tracker=$TRACKER
+  Product context:   $PCL_STATUS
   Mapping written →  $RK  (## Lead & gate mapping)
 =======================================
 

@@ -36,13 +36,15 @@ Whichever path is used, record it in `repo-knowledge.md` under `## Capabilities`
 
 ## Mode detection
 
-Run these checks at the start of the product-context step:
+`scripts/sj-adapter-scan.sh` already performed the detection during RECON and recorded the
+result as `productContext: present | MISSING` in the banner and in `## Capabilities`. Use that
+signal (re-check the paths below only if you did not run the scan):
 
 | Signal | Mode |
 |---|---|
-| A product context layer already exists (`docs/product/PRODUCT_PILOT.md`, `docs/product/*`, `PRODUCT.md`, or `<target>/.smokejumper/product-context.md`) | **Context** |
+| Scan reported `productContext: present` — a layer exists (`docs/product/PRODUCT_PILOT.md`, `docs/product/*`, `PRODUCT.md`, or `<target>/.smokejumper/product-context.md`) | **Context** |
 | Called from LESSONS LEARNED after shipping | **Update** |
-| No product context layer found anywhere | **Setup** |
+| Scan reported `productContext: MISSING` — no layer found anywhere | **Setup** |
 
 ---
 

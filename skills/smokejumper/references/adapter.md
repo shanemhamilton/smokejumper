@@ -62,6 +62,15 @@ for globally installed agents) for the following patterns:
 3. Bundled SmokeJumper generic agent
 4. Skip / degrade gracefully (for gates only — leads always have a bundled fallback)
 
+**Global dir scope (important correctness rule).** Leads and generic implementers (UI,
+backend, data, localization) may resolve from `~/.claude/agents/` — a globally installed
+agent there is plausibly intentional and a safe bundled/generic fallback exists if the match
+is wrong. **Gate roles (`adapter.gate.*`) and the safety/invariant guardians resolve from the
+target repo's `.claude/agents/` ONLY.** A gate or guardian pulled from the global dir is
+almost always a *foreign* project's named agent, which is misleading in the banner and — for
+a guardian — unsafe: absent must mean "route safety-critical work to the human", never
+"borrow a stranger's guardian". `scripts/sj-adapter-scan.sh` enforces this split.
+
 Record every resolution in `## Lead & gate mapping` in `repo-knowledge.md` and emit an
 `agent_resolved` event to `sprint-log.jsonl`.
 
@@ -84,6 +93,7 @@ Leads always have a bundled fallback; gates do not.
 | Issue tracker — none | Neither above found | Create a `sprint-plan.md` scratch tracker in `.smokejumper/` |
 | Cloud/platform deploy config | `deploy.json`, platform config, or CI deploy job present | Deploy gate uses project-specific deploy command |
 | Docker / container | `Dockerfile` present | Treat as containerized; note in capabilities |
+| Product context layer | `docs/product/PRODUCT_PILOT.md`, `docs/product/*.md`, `PRODUCT.md`, or `.smokejumper/product-context.md` present | Recorded as `productContext: MISSING`; RECON runs Setup (`references/product-context.md`) before DECIDE |
 
 Record all capability detections in `## Capabilities` in `repo-knowledge.md` and emit
 `capability_detected` or `capability_absent` events to `sprint-log.jsonl`.

@@ -96,12 +96,14 @@ been read and adopted (or dispatched as a subagent, if your runtime supports it)
 resolved product / engineering / design lead definitions before DECIDE, and surface the
 "Leads established" banner the scan printed.
 
-**Bootstrap product context.** Run the product-context step per
-`references/product-context.md`: detect whether a product context layer already exists; if
-it does, read it (Context mode); if none exists — the brand-new-repo case — establish one
-(Setup mode) before DECIDE, write the durable artifact, and record its path under
-`## Capabilities` in `repo-knowledge.md`. On a greenfield repo this is the most important
-RECON output: there is little code to model, so product context is what DECIDE runs on.
+**Bootstrap product context.** The adapter scan already reports `productContext: present | MISSING`
+in its banner and in `## Capabilities` — a deterministic cue, not a prose-only step you can
+skim past. Act on it per `references/product-context.md`: if **present**, read it (Context
+mode); if **MISSING** — the brand-new-repo case — establish one (Setup mode) before DECIDE,
+write the durable artifact, and update its path under `## Capabilities` in
+`repo-knowledge.md`. On a greenfield repo this is the most important RECON output: there is
+little code to model, so product context is what DECIDE runs on. **Do not advance to DECIDE
+with `productContext: MISSING` still unresolved.**
 
 Record everything as a compact repo model — enough to inform DECIDE and to route gates
 and lanes in EXECUTE. Do not read every source file; read CLAUDE.md, key architecture
