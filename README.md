@@ -71,7 +71,8 @@ file-and-shell capable agent) is the top-level orchestrator** — point the agen
 `skills/smokejumper/SKILL.md` and have it follow the eight phases. A runtime preflight
 (`references/runtime.md`) detects what your runtime can do and adapts:
 
-- **No subagent dispatch** → leads and reviewers are *adopted inline*: the orchestrator reads the resolved `agents/*.md` persona and acts as that role for the phase. RECON runs `scripts/sj-adapter-scan.sh`, which resolves the leads, writes the mapping into `repo-knowledge.md`, and prints a **"Leads established" banner** — so lead establishment is a visible, durable artifact, not an implicit step.
+- **No subagent dispatch** → leads and reviewers are *adopted inline*: the orchestrator reads the resolved `agents/*.md` persona and acts as that role for the phase. RECON runs `scripts/sj scan`, which resolves the leads, writes the mapping into `repo-knowledge.md` + `adapter-scan.json`, and prints a **"Leads established" banner** — so lead establishment is a visible, durable artifact, not an implicit step.
+- **The `sj` CLI is runtime-agnostic** → any orchestrator that can run a shell command gets the same deterministic gates (`sj gate`), state validation (`sj validate-state`), and safety tripwires (`sj lane-check`).
 - **No Skill tool** → the embedded reference files are used directly. Product context is bootstrapped by `references/product-context.md` + `templates/product-context.md` with **no dependency on any external skill**.
 - **`anthropic-skills:handoff-prompt` unavailable** → Phase 8 writes `<target>/.smokejumper/HANDOFF.md` directly.
 - **`choo-choo-ralph` / `bd` absent** → Lane A is unavailable; all work routes to Lane B (the synchronous crew).
@@ -82,7 +83,7 @@ file-and-shell capable agent) is the top-level orchestrator** — point the agen
 
 Two RECON outputs are durable, visible artifacts rather than steps an orchestrator has to remember — so they hold up under any runtime, including a Codex agent that skims prose.
 
-**Leads are established by a deterministic scan, not from memory.** `scripts/sj-adapter-scan.sh` resolves the product / engineering / design leads (a project-specific override or the bundled fallback), the gate roles, and the available capabilities; writes the mapping into `<target>/.smokejumper/repo-knowledge.md`; emits a `leads_established` event to the sprint log; and prints a banner:
+**Leads are established by a deterministic scan, not from memory.** `scripts/sj scan` resolves the product / engineering / design leads (a project-specific override or the bundled fallback), the gate roles, and the available capabilities; writes the mapping into `<target>/.smokejumper/repo-knowledge.md`; emits a `leads_established` event to the sprint log; and prints a banner:
 
 ```
 === SmokeJumper — Leads Established ===
@@ -124,6 +125,41 @@ SmokeJumper treats design as a first-class concern that **scales with functional
 
 ---
 
+## Deterministic enforcement — the `sj` CLI (v1.0.0)
+
+The safety contracts are commands, not prose. `skills/smokejumper/scripts/sj` is a single
+dependency-light CLI (bash + standard unix tools; `jq` optional with a fallback) that any
+runtime — Claude Code, Codex, plain CI — invokes the same way:
+
+```
+sj init <target>                        scaffold .smokejumper/ state (validates it's a git repo)
+sj scan <target>                        adapter scan → banner + repo-knowledge.md + adapter-scan.json
+sj gate record <gate> --reviewers a,b   write an evidence-backed gate marker
+sj gate check <gate>                    verify the marker before push (exit nonzero = no push)
+sj gate clear <gate>                    remove a stale marker explicitly
+sj validate-state <target> [--phase P]  schema-check sprint-log.jsonl + per-phase required events
+sj lane-check <target> <unit-file>      safety tripwire before any Lane A pour
+sj hooks install <target>               optional pre-push hook enforcing the gate check
+sj deps / sj version --check            dependency-pin drift / plugin update notices
+```
+
+**The gate evidence chain.** A gate marker is a claim with provenance, not a touch file:
+`sj gate record` appends reviewer events to `sprint-log.jsonl` and writes a marker citing
+those event IDs, the reviewed git HEAD, and a timestamp. `sj gate check` verifies all
+three — cited events exist in the log, the reviewed commit is an ancestor of HEAD, and no
+EXECUTE-phase work postdates the review. A fabricated, stale, or imported marker fails.
+Lane A pours additionally require a verified `plan-vetted` marker plus a CLEAR
+`sj lane-check` verdict per unit (migrations, auth/payments/secrets, CI config, release
+scripts, and `## Gate locations` paths trip it).
+
+**Tested.** A 44-test bats suite covers the gate chain end-to-end, scan fixtures
+(including a stale-plugin decoy and a regex-metacharacter repo path), and state
+validation; CI runs shellcheck + bats on ubuntu and macOS, including a no-`jq` fallback
+pass. A contract test keeps `references/adapter.md` and `adapter-scan.json` in sync — the
+prose can no longer drift from the implementation silently.
+
+---
+
 ## The 8-phase lifecycle
 
 Full design: [`docs/specs/2026-06-04-smokejumper-framework-design.md`](docs/specs/2026-06-04-smokejumper-framework-design.md)
@@ -147,11 +183,11 @@ flowchart TD
 
 1. **RECON** — Build a repo model: stack, conventions, gate locations, available tools, and any prior sprint knowledge from `.smokejumper/repo-knowledge.md`. A deterministic adapter scan (`sj scan`) **establishes the leads** (visible banner + durable mapping), detects design skills + design-system candidates, derives `functionalHealth` → `designPosture`, and a product-context bootstrap establishes a PRODUCT_PILOT-style brief — creating one on a brand-new repo where none exists.
 2. **DECIDE** — The established leads choose the highest-leverage next move, reading the product-context artifact from RECON as authoritative. When `designPosture` is `WEIGHTED`, design-debt and polish objectives rank higher. No fixed pipeline; they assess the actual state of the product and pick.
-3. **PLAN** *(front-loaded adversarial gate)* — Design + implementation plan produced, then put through the full adversarial review. PASS here authorizes execution — including any autonomous pour. Bad assumptions and unsafe decompositions are caught here, before hours of coding.
+3. **PLAN** *(front-loaded adversarial gate)* — Design + implementation plan produced, then put through the full adversarial review. PASS here authorizes execution — including any autonomous pour — and is recorded as an evidence-backed `plan-vetted` marker (`sj gate record`). Bad assumptions and unsafe decompositions are caught here, before hours of coding.
 4. **EXECUTE** *(two lanes)*
    - **Lane A — big pour (async, hours→days):** For large, decomposable, non-safety-critical work. Spec converted into a bead molecule; Codex runs each child at `model_reasoning_effort=high` with per-child mechanical gates (tests, build, lint, coverage). Launched as `nohup ./ralph.sh &` loops that grind autonomously and survive context resets.
    - **Lane B — synchronous crew (in-session):** For novel, architectural, design-sensitive, or safety-critical units. Engineering Lead dispatches Claude + Codex directly through the full adversarial flow to merged+pushed.
-5. **REVIEW** — Lane B gets full adversarial review before push. Lane A children have per-child mechanical gates baked into the formula; milestone spot-checks sample the autonomous batch.
+5. **REVIEW** — Lane B gets full adversarial review before push, recorded via `sj gate record adversarial-review` and verified by `sj gate check` before any push. Lane A children have per-child mechanical gates baked into the formula; milestone spot-checks sample the autonomous batch.
 6. **INTEGRATE** — Commit and push. Merging ≠ deploying; releases need explicit human greenlight.
 7. **LESSONS LEARNED** *(dual write-back)* — Learnings flow into two places: (a) `<target>/.smokejumper/repo-knowledge.md` committed to the target repo — including design-skill effectiveness scored into the `## Design skills` tally; (b) if a portable improvement was found, a versioned commit to this plugin repo with a `CHANGELOG.md` entry.
 8. **HANDOFF** — Clean handoff prompt so the next session resumes with zero lost context. When Lane A loops are still running, the handoff carries them explicitly.
@@ -202,7 +238,7 @@ Only **git** and **one of** Claude Code or Codex are hard-required; every depend
 degrades gracefully when absent (it never blocks a sprint).
 
 **Staying current — pin → notify → opt-in (never silent auto-pull).** Each dependency carries
-a tested `pin`. At sprint start, `scripts/sj-deps-check.sh` notifies (fail-silent,
+a tested `pin`. At sprint start, `scripts/sj deps` notifies (fail-silent,
 time-boxed) when an upstream has moved past its pin; `sj deps --update` bumps the
 pins on demand and prints the upgrade commands. A scheduled GitHub Action
 (`.github/workflows/dependency-scan.yml`) runs the same check in this repo and opens an issue
