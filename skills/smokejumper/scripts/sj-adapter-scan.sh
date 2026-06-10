@@ -310,15 +310,16 @@ pin_of() { # pin_of <dependency-id> — prints the pinned version or nothing
   local manifest="$SCRIPT_DIR/../references/dependencies.json"
   [ -f "$manifest" ] || return 0
   if have_jq; then
-    jq -r --arg id "$1" '.dependencies[] | select(.id == $id) | .pin // empty' "$manifest" 2>/dev/null
+    jq -r --arg id "$1" '.dependencies[] | select(.id == $id) | .pin // empty' "$manifest" 2>/dev/null || true
   else
-    grep -A6 "\"id\": \"$1\"" "$manifest" 2>/dev/null | grep -m1 '"pin"' | sed -E 's/.*"pin"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/'
+    # Fail-open: a no-match anywhere in this pipeline must not trip set -e.
+    grep -A8 "\"id\": \"$1\"" "$manifest" 2>/dev/null | grep -m1 '"pin"' | sed -E 's/.*"pin"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/' || true
   fi
 }
 warn_pin_drift() { # warn_pin_drift <dependency-id> <version-cmd...>
   local id="$1"; shift
   local pin installed
-  pin="$(pin_of "$id")"
+  pin="$(pin_of "$id" || true)"
   [ -n "$pin" ] || return 0
   installed="$("$@" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
   [ -n "$installed" ] || return 0
