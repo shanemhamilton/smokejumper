@@ -4,6 +4,20 @@ All notable changes to SmokeJumper are documented here. Format: [Keep a Changelo
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-06-09
+### Added
+- **The `sj` CLI** (`skills/smokejumper/scripts/sj`) — single entry point for every deterministic plugin action: `init | scan | deps | version | gate | validate-state | lane-check | hooks`, backed by a shared shell library (`scripts/lib/common.sh`: atomic writes, mkdir-based locking portable to macOS, trap-cleaned temp files, `SJ_STATE_DIR` override, git-repo validation).
+- **Gate evidence chain — the honor system is over.** `sj gate record <gate> --reviewers <a,b,c>` writes reviewer events into `sprint-log.jsonl` and a marker (`.adversarial-review-passed` / `.plan-vetted`, now inside `.smokejumper/`) citing those event IDs, the reviewed git HEAD, and a timestamp. `sj gate check <gate>` verifies the marker against the log (cited events exist), git history (reviewed commit is an ancestor of HEAD), and recency (no EXECUTE events postdate the review) — a fabricated, stale, or imported marker fails. `sj gate clear` replaces the prose "delete stale markers" step. `sj hooks install` adds an optional pre-push hook enforcing the check.
+- **State schemas + validation.** `schemas/sprint-event.schema.json` and `schemas/gap.schema.json` define the event vocabulary; `sj validate-state [--phase P]` validates the ledger structurally (jq, with grep fallback) and asserts each phase's required events.
+- **Lane A safety tripwire.** `sj lane-check <target> <unit-file>` deterministically flags units touching migrations, auth/payments/secrets, CI config, release scripts, or paths under `## Gate locations` — a DENY-ADVISORY verdict bars the unit from the unattended pour lane.
+- **Machine-readable adapter output.** `sj scan` now writes `adapter-scan.json` mirroring the `adapter.md` key contract; downstream phases parse JSON, not prose. A bats contract test fails CI when the spec and the output drift.
+- **Test harness + CI.** 44 bats tests (gate chain end-to-end, scan fixtures incl. a `metaswarm-old` decoy and a regex-metacharacter repo path, state validation, locking/atomic-write primitives) and a CI workflow running shellcheck + bats on ubuntu/macos, including a no-jq fallback pass.
+
+### Changed
+- **SKILL.md slimmed from 501 to 257 lines**: phase skeleton + a single "Non-negotiable invariants" section + a single "State artifacts per phase" table (replacing ~8 scattered record-this directives, each row mapped to its verifying `sj` command). Detailed per-phase procedure moved to `references/phases.md` (load-on-demand). The `designPosture` prioritization-only rule is stated once, with other files deferring to it.
+- **Adapter scan hardened**: `gh` tracker probe runs inside the target repo; plugin detection matches exact directory names (no more `metaswarm-old` false positives); design-system path stripping is regex-metacharacter-safe; `repo-knowledge.md` section rewrites are locked + atomic; detected backend versions are warned against `dependencies.json` pins.
+- `sj-init.sh` is now a deprecated shim delegating to `sj init` (which validates the target is a git repo). `sj version` reports the state-format version for forward-compat checks.
+
 ## [0.9.0] - 2026-06-05
 ### Added
 - **Stronger designer element — functional-health-gated design weighting.** The adapter scan now derives a **windowed `functionalHealth`** (POOR | FAIR | HEALTHY) from gate/outcome failures over the last 2 sprints and maps it to a `designPosture` (ADVISORY | WEIGHTED), written into `## Capabilities` (`adapter.health.*`) and emitted as a `design_posture_set` event. DECIDE reads `designPosture`: when **WEIGHTED** the product lead ranks design-debt/polish/UX objectives higher; when **ADVISORY** functional work wins. The signal is windowed (not cumulative) so it **recovers** — design gets weighted once functional issues are actually addressed. Prioritization only: never gates a push, never makes a gate blocking, never forces a skill invocation.

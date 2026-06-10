@@ -62,10 +62,14 @@ EOF
   echo "Initialized $sj_dir"
 }
 
+# State format version: bump when the layout/semantics of .smokejumper/ files
+# change incompatibly. Lets a future sj refuse to operate on newer-format state.
+SJ_STATE_FORMAT=1
+
 cmd_version() {
   local plugin_root; plugin_root="$(cd "$SJ_SCRIPT_DIR/../../.." && pwd)"
   local v; v="$(cat "$plugin_root/VERSION" 2>/dev/null || echo unknown)"
-  echo "smokejumper $v"
+  echo "smokejumper $v (state-format $SJ_STATE_FORMAT)"
   if [ "${1:-}" = "--check" ]; then
     "$SJ_SCRIPT_DIR/sj-version-check.sh" || true
   fi
