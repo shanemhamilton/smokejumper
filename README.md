@@ -145,7 +145,7 @@ flowchart TD
     LL -. write-back .-> FW[("plugin repo<br/>VERSION + CHANGELOG")]
 ```
 
-1. **RECON** — Build a repo model: stack, conventions, gate locations, available tools, and any prior sprint knowledge from `.smokejumper/repo-knowledge.md`. A deterministic adapter scan (`sj-adapter-scan.sh`) **establishes the leads** (visible banner + durable mapping), detects design skills + design-system candidates, derives `functionalHealth` → `designPosture`, and a product-context bootstrap establishes a PRODUCT_PILOT-style brief — creating one on a brand-new repo where none exists.
+1. **RECON** — Build a repo model: stack, conventions, gate locations, available tools, and any prior sprint knowledge from `.smokejumper/repo-knowledge.md`. A deterministic adapter scan (`sj scan`) **establishes the leads** (visible banner + durable mapping), detects design skills + design-system candidates, derives `functionalHealth` → `designPosture`, and a product-context bootstrap establishes a PRODUCT_PILOT-style brief — creating one on a brand-new repo where none exists.
 2. **DECIDE** — The established leads choose the highest-leverage next move, reading the product-context artifact from RECON as authoritative. When `designPosture` is `WEIGHTED`, design-debt and polish objectives rank higher. No fixed pipeline; they assess the actual state of the product and pick.
 3. **PLAN** *(front-loaded adversarial gate)* — Design + implementation plan produced, then put through the full adversarial review. PASS here authorizes execution — including any autonomous pour. Bad assumptions and unsafe decompositions are caught here, before hours of coding.
 4. **EXECUTE** *(two lanes)*
@@ -203,7 +203,7 @@ degrades gracefully when absent (it never blocks a sprint).
 
 **Staying current — pin → notify → opt-in (never silent auto-pull).** Each dependency carries
 a tested `pin`. At sprint start, `scripts/sj-deps-check.sh` notifies (fail-silent,
-time-boxed) when an upstream has moved past its pin; `sj-deps-check.sh --update` bumps the
+time-boxed) when an upstream has moved past its pin; `sj deps --update` bumps the
 pins on demand and prints the upgrade commands. A scheduled GitHub Action
 (`.github/workflows/dependency-scan.yml`) runs the same check in this repo and opens an issue
 when an upstream moves — so the plugin stays current without touching anyone's sprint.
@@ -238,12 +238,17 @@ skills/smokejumper/
   agents/openai.yaml     # Codex skill-discovery metadata
   templates/
     product-context.md   # embedded PRODUCT_PILOT-style brief (no external skill needed)
+  schemas/               # JSON Schemas for sprint-log.jsonl + gaps.jsonl
   scripts/
-    sj-init.sh           # scaffolds <target>/.smokejumper/ (idempotent)
-    sj-adapter-scan.sh   # deterministic lead/gate/capability scan → mapping + banner + events
-    sj-version-check.sh  # non-blocking SmokeJumper update check, run at sprint start
-    sj-deps-check.sh     # non-blocking dependency drift check (--update to bump pins)
+    sj                   # the SmokeJumper CLI: init | scan | deps | version | gate | validate-state | lane-check | hooks
+    lib/                 # shared shell lib (atomic writes, locking, JSON, events) + subcommand impls
+    sj-adapter-scan.sh   # `sj scan` implementation: lead/gate/capability scan → adapter-scan.json + banner + events
+    sj-version-check.sh  # `sj version --check` implementation
+    sj-deps-check.sh     # `sj deps` implementation (--update to bump pins)
+    sj-init.sh           # DEPRECATED shim → `sj init`
+tests/                   # bats suite (gate evidence chain, scan contract, state validation)
 .github/workflows/
+  ci.yml                 # shellcheck + bats on ubuntu/macos (incl. no-jq fallback pass)
   dependency-scan.yml    # scheduled upstream-drift scan → opens an issue
 docs/specs/              # design spec
 CHANGELOG.md

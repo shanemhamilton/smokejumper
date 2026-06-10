@@ -80,7 +80,7 @@ One Markdown file. Updated in place each sprint (never replaced wholesale). Stru
   If prior content is still accurate, leave it.
 - Never truncate this file to save space. It is the project's institutional memory.
 
-**Section ownership (load-bearing).** The adapter scan (`sj-adapter-scan.sh`) regenerates the
+**Section ownership (load-bearing).** The adapter scan (`sj scan`) regenerates the
 `## Lead & gate mapping` and `## Capabilities` sections wholesale every RECON via `replace_section`.
 It writes design-skill **detection** (`adapter.skills.design.*`, `functionalHealth`, `designPosture`)
 and design-system **candidate paths** (`adapter.designSystem`) into `## Capabilities` — safe, because

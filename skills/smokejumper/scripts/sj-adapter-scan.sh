@@ -14,21 +14,25 @@
 # .claude/agents/ (most specific), then ~/.claude/agents/ (globally installed). If none
 # matches, leads fall back to the BUNDLED smokejumper-*-lead persona; gates resolve to
 # null (a gate is skipped, never fabricated with a bundled generic — per adapter.md).
+# shellcheck source-path=SCRIPTDIR
 set -euo pipefail
 
 TARGET="${1:?usage: sj-adapter-scan.sh <target-repo-root>}"
-SJ_DIR="$TARGET/.smokejumper"
-RK="$SJ_DIR/repo-knowledge.md"
-LOG="$SJ_DIR/sprint-log.jsonl"
-SPRINT="${SJ_SPRINT:-sprint-$(date -u +%Y-%m-%d)}"
-TS() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/lib/common.sh"
 
-# --- Ensure state dir exists (reuse sj-init.sh if present; else scaffold the minimum) ----
+SJ_DIR="$(sj_state_dir "$TARGET")"
+RK="$SJ_DIR/repo-knowledge.md"
+LOG="$SJ_DIR/sprint-log.jsonl"
+ADAPTER_JSON="$SJ_DIR/adapter-scan.json"
+SPRINT="${SJ_SPRINT:-sprint-$(date -u +%Y-%m-%d)}"
+TS() { sj_ts; }
+
+# --- Ensure state dir exists (reuse sj init if present; else scaffold the minimum) -------
 if [ ! -f "$RK" ]; then
-  if [ -x "$SCRIPT_DIR/sj-init.sh" ]; then
-    "$SCRIPT_DIR/sj-init.sh" "$TARGET" >/dev/null
+  if [ -x "$SCRIPT_DIR/sj" ]; then
+    "$SCRIPT_DIR/sj" init "$TARGET" >/dev/null
   else
     mkdir -p "$SJ_DIR"
     printf '# Repo Knowledge (SmokeJumper)\n\n## Lead & gate mapping\n\n## Capabilities\n' > "$RK"
@@ -73,20 +77,8 @@ resolve_role() {
 # stranger's guardian".
 resolve_role_target_only() { _match_in_dir "$TARGET/.claude/agents" "$1"; }
 
-# JSON string escaper (backslash + double-quote only; details are kept simple by design).
-json_escape() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
-
-# emit <phase> <event> <detail> [outcome] [ref]
-emit() {
-  local phase="$1" event="$2" detail="$3" outcome="${4:-}" ref="${5:-}"
-  {
-    printf '{"ts":"%s","sprint":"%s","phase":"%s","event":"%s","detail":"%s"' \
-      "$(TS)" "$SPRINT" "$phase" "$event" "$(json_escape "$detail")"
-    [ -n "$outcome" ] && printf ',"outcome":"%s"' "$outcome"
-    [ -n "$ref" ] && printf ',"ref":"%s"' "$(json_escape "$ref")"
-    printf '}\n'
-  } >> "$LOG"
-}
+# emit <phase> <event> <detail> [outcome] [ref] — thin wrapper over lib emit_event.
+emit() { emit_event "$LOG" "$SPRINT" "$@"; }
 
 # --- Resolve leads (always have a bundled fallback) --------------------------------------
 PRODUCT_MATCH="$(resolve_role 'product-lead')"
@@ -134,12 +126,14 @@ cap() { # cap <label> <test-cmd...> ; sets CAP_RESULT=yes|no and emits an event
   else CAP_RESULT=no; emit RECON capability_absent "$label"; fi
 }
 # plugin_present <name> — true if installed as a skill dir OR a plugin (cache/data/marketplaces,
-# which nest as ~/.claude/plugins/<kind>/<name>-marketplace/<name>).
+# which nest as ~/.claude/plugins/<kind>/<name>-marketplace/<name>). Matches the EXACT
+# directory name (or <name>-marketplace) — substring globs would detect stale copies like
+# "<name>-old" and report a capability that is not actually usable.
 plugin_present() {
   local n="$1"
   [ -d "$HOME/.claude/skills/$n" ] && return 0
-  ls -d "$HOME"/.claude/plugins/*/"$n"* >/dev/null 2>&1 && return 0
-  ls -d "$HOME"/.claude/plugins/*/*"$n"* >/dev/null 2>&1 && return 0
+  [ -d "$HOME/.claude/plugins" ] || return 1
+  find "$HOME/.claude/plugins" -maxdepth 3 -type d \( -name "$n" -o -name "$n-marketplace" \) -print -quit 2>/dev/null | grep -q . && return 0
   return 1
 }
 has_ralph() { command -v ralph >/dev/null 2>&1 || plugin_present choo-choo-ralph; }
@@ -152,7 +146,10 @@ cap "bugsweep (deep bug-hunt backend)"   has_bugsweep; BUGSWEEP="$CAP_RESULT"
 cap "issue tracker: beads (bd)"          command -v bd;    BD="$CAP_RESULT"
 TRACKER="none"
 [ "$BD" = "yes" ] && TRACKER="beads"
-if [ "$TRACKER" = "none" ] && command -v gh >/dev/null 2>&1 && gh issue list >/dev/null 2>&1; then
+# gh must be probed IN the target repo — a global `gh issue list` would report whatever
+# repo the current working directory happens to be in.
+if [ "$TRACKER" = "none" ] && command -v gh >/dev/null 2>&1 \
+   && (cd "$TARGET" && gh issue list --limit 1 >/dev/null 2>&1); then
   TRACKER="github"; emit RECON capability_detected "issue tracker: GitHub Issues"
 fi
 
@@ -214,6 +211,7 @@ D_FRONTEND=""
 if [ -f "$PLUGINS_JSON" ] && grep -q '"frontend-design@' "$PLUGINS_JSON" 2>/dev/null; then
   D_FRONTEND="frontend-design (plugin)"
 fi
+SIMPLIFY_SKILL="$(resolve_design_skill '^simplify$|code-simplifier')"
 for pair in "review:$D_REVIEW" "consult:$D_CONSULT" "a11y:$D_A11Y" "frontend:$D_FRONTEND"; do
   k="${pair%%:*}"; v="${pair#*:}"
   if [ -n "$v" ]; then emit RECON capability_detected "design skill $k: $v"
@@ -232,7 +230,9 @@ DS_CANDIDATES="$(
       -iname 'tailwind.config.*' -o -iname 'DESIGN.md' -o -iname 'STYLEGUIDE.md' \
       -o -iname 'tokens.*' -o -iname '*.tokens.json' -o -iname 'theme.ts' -o -iname 'theme.css' \
       -o -iname 'Theme.swift' -o -iname 'DesignSystem*.swift' -o -iname 'Color.kt' -o -iname 'Type.kt' \
-    \) -print 2>/dev/null | head -8 | sed "s#^$TARGET/##" | paste -sd, - || true
+    \) -print 2>/dev/null | head -8 \
+    | awk -v t="$TARGET/" 'index($0, t) == 1 { print substr($0, length(t) + 1); next } { print }' \
+    | paste -sd, - || true
 )"
 for d in ".storybook" "design-system" "docs/design"; do
   [ -d "$TARGET/$d" ] && DS_CANDIDATES="${DS_CANDIDATES:+$DS_CANDIDATES,}$d/"
@@ -279,7 +279,7 @@ emit RECON design_posture_set "functionalHealth=$HEALTH designPosture=$POSTURE (
 # newlines in a -v assignment.
 replace_section() {
   local file="$1" header="$2" body="$3" tmp bodyfile
-  tmp="$(mktemp)"; bodyfile="$(mktemp)"
+  mktemp_traced tmp; mktemp_traced bodyfile
   printf '%s\n' "$body" > "$bodyfile"
   if grep -Fxq "$header" "$file"; then
     awk -v hdr="$header" -v bf="$bodyfile" '
@@ -298,9 +298,38 @@ replace_section() {
     printf '\n%s\n\n' "$header" >> "$tmp"
     cat "$bodyfile" >> "$tmp"
   fi
-  mv "$tmp" "$file"
-  rm -f "$bodyfile"
+  # Atomic replace: cat into atomic_write (same-dir temp + rename) so a concurrent
+  # reader never sees a half-written file; with_lock at the call site serializes writers.
+  atomic_write "$file" < "$tmp"
 }
+
+# --- Optional version-pin verification ----------------------------------------------------
+# Detected CLI backends are compared against the pins in references/dependencies.json.
+# A mismatch is a warning only (pin-notify-opt-in policy) — never blocks the scan.
+pin_of() { # pin_of <dependency-id> — prints the pinned version or nothing
+  local manifest="$SCRIPT_DIR/../references/dependencies.json"
+  [ -f "$manifest" ] || return 0
+  if have_jq; then
+    jq -r --arg id "$1" '.dependencies[] | select(.id == $id) | .pin // empty' "$manifest" 2>/dev/null || true
+  else
+    # Fail-open: a no-match anywhere in this pipeline must not trip set -e.
+    grep -A8 "\"id\": \"$1\"" "$manifest" 2>/dev/null | grep -m1 '"pin"' | sed -E 's/.*"pin"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/' || true
+  fi
+}
+warn_pin_drift() { # warn_pin_drift <dependency-id> <version-cmd...>
+  local id="$1"; shift
+  local pin installed
+  pin="$(pin_of "$id" || true)"
+  [ -n "$pin" ] || return 0
+  installed="$("$@" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
+  [ -n "$installed" ] || return 0
+  if [ "$installed" != "$pin" ]; then
+    warn "$id installed v$installed differs from tested pin v$pin (see references/dependencies.json)"
+    emit RECON capability_detected "$id version drift: installed=$installed pin=$pin" warning
+  fi
+}
+[ "$CODEX" = yes ] && warn_pin_drift codex codex --version
+command -v gh >/dev/null 2>&1 && warn_pin_drift gh gh --version
 
 MAPPING="$(cat <<EOF
 - Product lead: \`$PRODUCT_LEAD\` ($PRODUCT_SRC)
@@ -337,8 +366,78 @@ CAPABILITIES="$(cat <<EOF
 EOF
 )"
 
-replace_section "$RK" "## Lead & gate mapping" "$MAPPING"
-replace_section "$RK" "## Capabilities" "$CAPABILITIES"
+# Serialize writers: two concurrent RECON runs must not interleave section rewrites.
+with_lock "$SJ_DIR/.rk.lock" replace_section "$RK" "## Lead & gate mapping" "$MAPPING"
+with_lock "$SJ_DIR/.rk.lock" replace_section "$RK" "## Capabilities" "$CAPABILITIES"
+
+# --- Machine-readable adapter output ------------------------------------------------------
+# Downstream phases (DECIDE, lane routing) parse THIS, not the markdown rendering above.
+# Keys mirror references/adapter.md; the contract test in tests/ keeps them in sync.
+# adapter.model.* stays null here by design — RECON reads model tiers from the target's
+# CLAUDE.md, not from this script.
+jstr()  { if [ -n "$1" ]; then printf '"%s"' "$(json_escape "$1")"; else printf 'null'; fi; }
+jbool() { [ "$1" = yes ] && printf 'true' || printf 'false'; }
+
+atomic_write "$ADAPTER_JSON" <<EOF
+{
+  "scannedAt": "$(TS)",
+  "sprint": "$SPRINT",
+  "leads": {
+    "productLead": $(jstr "$PRODUCT_LEAD"),
+    "productLeadSource": $(jstr "$PRODUCT_SRC"),
+    "engineeringLead": $(jstr "$ENG_LEAD"),
+    "engineeringLeadSource": $(jstr "$ENG_SRC"),
+    "designLead": $(jstr "$DESIGN_LEAD"),
+    "designLeadSource": $(jstr "$DESIGN_SRC")
+  },
+  "agents": {
+    "uiImplementer": $(jstr "$UI_IMPL"),
+    "backendImplementer": $(jstr "$BACKEND_IMPL"),
+    "safetyGuardian": $(jstr "$SAFETY_GUARD"),
+    "invariantGuardian": $(jstr "$SAFETY_GUARD"),
+    "dataAuditor": $(jstr "$DATA_AUDIT"),
+    "localizationReviewer": $(jstr "$L10N_REVIEW")
+  },
+  "gate": {
+    "designReviewer": $(jstr "$GATE_DESIGN"),
+    "thesisGuardian": $(jstr "$GATE_THESIS"),
+    "reviewIntegrity": $(jstr "$GATE_INTEGRITY"),
+    "firstUseCritic": $(jstr "$GATE_FIRSTUSE"),
+    "qualityControl": $(jstr "$GATE_QC")
+  },
+  "capabilities": {
+    "asyncLoop": $(jbool "$ASYNC_LOOP"),
+    "codex": $(jbool "$CODEX"),
+    "metaswarm": $(jbool "$METASWARM"),
+    "bugsweep": $(jbool "$BUGSWEEP"),
+    "tracker": $(if [ "$TRACKER" = none ]; then printf 'null'; else jstr "$TRACKER"; fi),
+    "syncFrameworks": []
+  },
+  "model": {
+    "defaultTier": null,
+    "escalationTier": null,
+    "floor": null
+  },
+  "skills": {
+    "simplify": $(jstr "$SIMPLIFY_SKILL"),
+    "design": {
+      "review": $(jstr "$D_REVIEW"),
+      "consult": $(jstr "$D_CONSULT"),
+      "a11y": $(jstr "$D_A11Y"),
+      "frontend": $(jstr "$D_FRONTEND")
+    }
+  },
+  "health": {
+    "functionalHealth": $(jstr "$HEALTH"),
+    "designPosture": $(jstr "$POSTURE")
+  },
+  "designSystemCandidates": $(jstr "$DS_CANDIDATES"),
+  "productContext": $(jstr "$PCL_PATH")
+}
+EOF
+if have_jq && ! jq -e . "$ADAPTER_JSON" >/dev/null 2>&1; then
+  warn "adapter-scan.json failed JSON validation — fix the scan before trusting downstream parsing"
+fi
 
 emit RECON leads_established "product=$PRODUCT_LEAD eng=$ENG_LEAD design=$DESIGN_LEAD ($PRODUCT_SRC/$ENG_SRC/$DESIGN_SRC)" success
 

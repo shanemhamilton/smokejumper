@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# sj — SmokeJumper CLI. Single entry point for all deterministic plugin actions.
+#
+# Subcommands:
+#   sj init <target>                       scaffold .smokejumper/ state (idempotent)
+#   sj scan <target>                       adapter scan: leads / gates / capabilities
+#   sj deps [--update|--verbose]           dependency pin drift check (notify-only)
+#   sj version [--check]                   print plugin version; --check polls for updates
+#   sj gate record|check|clear ...         gate evidence chain (see: sj gate --help)
+#   sj validate-state <target> [--phase P] validate sprint-log.jsonl / gaps.jsonl
+#   sj lane-check <target> <unit-file>     advisory Lane A safety pre-check
+#   sj hooks install <target>              install optional pre-push gate hook
+#
+# State dir defaults to <target>/.smokejumper; override with SJ_STATE_DIR.
+# shellcheck source-path=SCRIPTDIR
+set -euo pipefail
+
+SJ_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SJ_SCRIPT_DIR/lib/common.sh"
+
+usage() { sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+cmd_init() {
+  local target="${1:?usage: sj init <target-repo-root>}"
+  require_git_repo "$target"
+  local sj_dir; sj_dir="$(sj_state_dir "$target")"
+  mkdir -p "$sj_dir" || die "cannot create state dir: $sj_dir"
+
+  if [ ! -f "$sj_dir/repo-knowledge.md" ]; then
+    atomic_write "$sj_dir/repo-knowledge.md" <<'EOF'
+# Repo Knowledge (SmokeJumper)
+
+Durable, accumulative knowledge for this repo. RECON loads this on arrival; LESSONS-LEARNED enriches it on departure.
+
+## Stack
+
+## Conventions
+
+## Build / test / lint commands
+
+## Gate locations
+
+## Design system
+
+## Lead & gate mapping
+
+## Model tier
+
+## Capabilities
+
+## Design skills
+
+## Known traps
+
+## What worked / What to avoid
+
+## Framework improvements pending
+EOF
+  fi
+
+  touch "$sj_dir/sprint-log.jsonl" "$sj_dir/gaps.jsonl"
+  echo "Initialized $sj_dir"
+}
+
+# State format version: bump when the layout/semantics of .smokejumper/ files
+# change incompatibly. Lets a future sj refuse to operate on newer-format state.
+SJ_STATE_FORMAT=1
+
+cmd_version() {
+  local plugin_root; plugin_root="$(cd "$SJ_SCRIPT_DIR/../../.." && pwd)"
+  local v; v="$(cat "$plugin_root/VERSION" 2>/dev/null || echo unknown)"
+  echo "smokejumper $v (state-format $SJ_STATE_FORMAT)"
+  if [ "${1:-}" = "--check" ]; then
+    "$SJ_SCRIPT_DIR/sj-version-check.sh" || true
+  fi
+}
+
+main() {
+  local cmd="${1:-}"
+  [ -n "$cmd" ] || { usage; exit 1; }
+  shift
+  case "$cmd" in
+    init)           cmd_init "$@" ;;
+    scan)           exec "$SJ_SCRIPT_DIR/sj-adapter-scan.sh" "$@" ;;
+    deps)           exec "$SJ_SCRIPT_DIR/sj-deps-check.sh" "$@" ;;
+    version)        cmd_version "$@" ;;
+    gate)           . "$SJ_SCRIPT_DIR/lib/gate.sh";    gate_main "$@" ;;
+    validate-state) . "$SJ_SCRIPT_DIR/lib/validate.sh"; validate_main "$@" ;;
+    lane-check)     . "$SJ_SCRIPT_DIR/lib/lane.sh";    lane_main "$@" ;;
+    hooks)          . "$SJ_SCRIPT_DIR/lib/hooks.sh";   hooks_main "$@" ;;
+    -h|--help|help) usage ;;
+    *)              die "unknown subcommand: $cmd (run: sj --help)" ;;
+  esac
+}
+
+main "$@"

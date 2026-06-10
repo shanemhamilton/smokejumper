@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shanemhamilton/smokejumper/schemas/gap.schema.json",
+  "title": "SmokeJumper self-healing gap",
+  "description": "One line of .smokejumper/gaps.jsonl. Records a missing agent/skill/capability discovered mid-sprint.",
+  "type": "object",
+  "required": ["ts", "detail"],
+  "properties": {
+    "ts": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "sprint": { "type": "string" },
+    "kind": {
+      "type": "string",
+      "enum": ["agent", "skill", "capability", "knowledge", "other"]
+    },
+    "detail": { "type": "string", "description": "What was missing and what was done instead" },
+    "resolution": { "type": "string", "description": "How the gap was closed, if it was" }
+  },
+  "additionalProperties": false
+}
