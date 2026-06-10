@@ -94,7 +94,10 @@ with_lock() {
   local ttl="${SJ_LOCK_TTL:-300}" waited=0 age now mtime rc
   while ! mkdir "$lockdir" 2>/dev/null; do
     now="$(date +%s)"
-    mtime="$(stat -f %m "$lockdir" 2>/dev/null || stat -c %Y "$lockdir" 2>/dev/null || echo "$now")"
+    # GNU first: BSD `stat -c` fails cleanly, but GNU `stat -f %m` SUCCEEDS with
+    # filesystem info (mount point), silently poisoning the arithmetic below.
+    mtime="$(stat -c %Y "$lockdir" 2>/dev/null || stat -f %m "$lockdir" 2>/dev/null || echo "$now")"
+    case "$mtime" in (*[!0-9]*) mtime="$now" ;; esac
     age=$(( now - mtime ))
     if [ "$age" -ge "$ttl" ]; then
       warn "breaking stale lock (${age}s old): $lockdir"

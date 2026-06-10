@@ -87,8 +87,9 @@ gate_check() {
   rec_head="$(_gate_field "$marker" head)"
   rec_ts="$(_gate_field "$marker" recorded)"
   ids="$(_gate_field "$marker" events)"
-  [ -n "$rec_head" ] && [ -n "$rec_ts" ] && [ -n "$ids" ] \
-    || { echo "FAIL: marker is malformed (missing head/recorded/events): $marker"; return 1; }
+  if [ -z "$rec_head" ] || [ -z "$rec_ts" ] || [ -z "$ids" ]; then
+    echo "FAIL: marker is malformed (missing head/recorded/events): $marker"; return 1
+  fi
 
   # 1. Every cited event ID must resolve to a real log entry.
   local IFS=','
@@ -145,7 +146,7 @@ gate_clear() {
 
 gate_main() {
   local action="${1:-}" gate="${2:-}" target="$PWD" reviewers=""
-  [ -n "$action" ] && [ -n "$gate" ] || { gate_usage; exit 1; }
+  if [ -z "$action" ] || [ -z "$gate" ]; then gate_usage; exit 1; fi
   shift 2
   while [ $# -gt 0 ]; do
     case "$1" in

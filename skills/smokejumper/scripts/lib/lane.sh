@@ -23,7 +23,7 @@ _LANE_DENY_PATTERNS='migration|migrate|schema change|auth|oauth|jwt|session|pass
 
 lane_main() {
   local target="${1:-}" unit_file="${2:-}"
-  [ -n "$target" ] && [ -n "$unit_file" ] || { lane_usage; exit 1; }
+  if [ -z "$target" ] || [ -z "$unit_file" ]; then lane_usage; exit 1; fi
   [ -f "$unit_file" ] || die "unit file not found: $unit_file"
 
   local sj_dir log rk hits gate_hits="" verdict

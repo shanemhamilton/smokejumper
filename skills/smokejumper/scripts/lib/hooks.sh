@@ -50,7 +50,7 @@ EOF
 
 hooks_main() {
   local action="${1:-}" target="${2:-}" force=0
-  [ "$action" = install ] && [ -n "$target" ] || { hooks_usage; exit 1; }
+  if [ "$action" != install ] || [ -z "$target" ]; then hooks_usage; exit 1; fi
   [ "${3:-}" = "--force" ] && force=1
   hooks_install "$target" "$force"
 }

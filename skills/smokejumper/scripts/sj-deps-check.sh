@@ -59,7 +59,10 @@ gh_latest() {
   local repo="$1" cache="$CACHE_DIR/${1//\//_}" tag now
   if [ -f "$cache" ]; then
     now="$(date +%s 2>/dev/null || echo 0)"
-    local mtime; mtime="$(stat -f %m "$cache" 2>/dev/null || stat -c %Y "$cache" 2>/dev/null || echo 0)"
+    # GNU first: on Linux `stat -f %m` succeeds with filesystem info (mount point),
+    # not an mtime — BSD `stat -c` fails cleanly, so this order is safe on both.
+    local mtime; mtime="$(stat -c %Y "$cache" 2>/dev/null || stat -f %m "$cache" 2>/dev/null || echo 0)"
+    case "$mtime" in (*[!0-9]*) mtime=0 ;; esac
     if [ "$((now - mtime))" -lt 43200 ]; then cat "$cache"; return 0; fi
   fi
   tag="$(curl -fsS --max-time 5 "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null \
