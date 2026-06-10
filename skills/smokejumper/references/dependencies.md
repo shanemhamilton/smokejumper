@@ -6,7 +6,7 @@ is the single source of truth for **what SmokeJumper stands on**, so the set is 
 trackable, and easy to extend.
 
 `dependencies.json` is the data; this file explains the policy. The sprint-start check
-`scripts/sj-deps-check.sh` reads the JSON; the adapter (`adapter.md` / `sj-adapter-scan.sh`)
+`scripts/sj-deps-check.sh` reads the JSON; the adapter (`adapter.md` / `sj scan`)
 reads the same `detect` rules to resolve capabilities. Add a dependency in one place (the
 JSON) and every consumer picks it up.
 
@@ -41,11 +41,11 @@ upgrade without review) and the existing notify-only version check.
 - **Pin.** Each dependency carries a `pin` (the version SmokeJumper was last tested against)
   and `tested` (the version a maintainer confirmed works). A null pin means "not yet pinned"
   — the first `--update` records it.
-- **Notify.** At sprint start, `sj-deps-check.sh` compares each pin against the latest
+- **Notify.** At sprint start, `sj deps` compares each pin against the latest
   upstream and prints a one-line notice when an upstream has moved ahead. It is **fail-silent
   and time-boxed** — no network, a slow API, or an unknown source produces no output and
   never stalls a sprint.
-- **Opt-in upgrade.** `sj-deps-check.sh --update` bumps the pins to the detected latest and
+- **Opt-in upgrade.** `sj deps --update` bumps the pins to the detected latest and
   prints the per-runtime upgrade commands. It does **not** run plugin upgrades for you and
   does **not** overwrite the vendored `product-pilot` copy — those are deliberate, reviewed
   steps.

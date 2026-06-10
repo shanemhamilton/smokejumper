@@ -86,7 +86,7 @@ Leads always have a bundled fallback; gates do not.
 
 | Capability | How to detect | If absent |
 |---|---|---|
-| Async loop tool (choo-choo-ralph or equivalent) | `which ralph`, or installed as a skill/plugin (`sj-adapter-scan.sh` checks `~/.claude/skills/` and `~/.claude/plugins/`) | Lane A (async pour) not available; all work routes to Lane B |
+| Async loop tool (choo-choo-ralph or equivalent) | `which ralph`, or installed as a skill/plugin (`sj scan` checks `~/.claude/skills/` and `~/.claude/plugins/`) | Lane A (async pour) not available; all work routes to Lane B |
 | Codex CLI | `which codex` | Async formula steps use Claude directly (slower); token budget impact noted |
 | metaswarm (adversarial-gate backend) | installed as a skill dir or plugin under `~/.claude/plugins/` | Use SmokeJumper's bundled adversarial review flow — no functional loss |
 | bugsweep (deep bug-hunt backend) | installed as a skill dir (`~/.claude/skills/bugsweep`) or plugin | Skip the optional bug-hunt pass in REVIEW — no functional loss |
@@ -96,7 +96,7 @@ Leads always have a bundled fallback; gates do not.
 | Cloud/platform deploy config | `deploy.json`, platform config, or CI deploy job present | Deploy gate uses project-specific deploy command |
 | Docker / container | `Dockerfile` present | Treat as containerized; note in capabilities |
 | Product context layer | `docs/product/PRODUCT_PILOT.md`, `docs/product/*.md`, `PRODUCT.md`, or `.smokejumper/product-context.md` present | Recorded as `productContext: MISSING`; RECON runs Setup (`references/product-context.md`) before DECIDE |
-| Design skills / plugins | `sj-adapter-scan.sh` scans `~/.claude/skills/*/SKILL.md`, `~/.claude/skills/gstack/*/SKILL.md`, and `frontend-design` in `~/.claude/plugins/installed_plugins.json` for design-review / design-consultation / accessibility / frontend-design skills | Recorded as `adapter.skills.design.*` (null per key); the design lead proceeds analytically — manual critique + a WCAG 2.2 AA check by hand |
+| Design skills / plugins | `sj scan` scans `~/.claude/skills/*/SKILL.md`, `~/.claude/skills/gstack/*/SKILL.md`, and `frontend-design` in `~/.claude/plugins/installed_plugins.json` for design-review / design-consultation / accessibility / frontend-design skills | Recorded as `adapter.skills.design.*` (null per key); the design lead proceeds analytically — manual critique + a WCAG 2.2 AA check by hand |
 
 Record all capability detections in `## Capabilities` in `repo-knowledge.md` and emit
 `capability_detected` or `capability_absent` events to `sprint-log.jsonl`.
