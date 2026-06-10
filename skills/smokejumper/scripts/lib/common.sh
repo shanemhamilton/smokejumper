@@ -54,19 +54,21 @@ require_git_repo() {
 
 # --- Temp files with guaranteed cleanup --------------------------------------
 
-# mktemp_traced — prints a temp file path registered for cleanup on EXIT.
-# Uses a single accumulated trap so multiple calls compose.
+# mktemp_traced <varname> — creates a temp file, assigns its path to <varname>,
+# and registers it for cleanup on EXIT. Takes a variable name (NOT command
+# substitution) because $(mktemp_traced) would run in a subshell, where both the
+# trap and the registration list die with the subshell.
 _SJ_TMPFILES=""
 _sj_cleanup_tmp() {
   local f
   for f in $_SJ_TMPFILES; do rm -f "$f" 2>/dev/null || true; done
 }
 mktemp_traced() {
-  local t
-  t="$(mktemp)" || die "mktemp failed"
+  local __t
+  __t="$(mktemp)" || die "mktemp failed"
   if [ -z "$_SJ_TMPFILES" ]; then trap _sj_cleanup_tmp EXIT; fi
-  _SJ_TMPFILES="$_SJ_TMPFILES $t"
-  printf '%s' "$t"
+  _SJ_TMPFILES="$_SJ_TMPFILES $__t"
+  printf -v "$1" '%s' "$__t"
 }
 
 # --- Atomic writes & locking -------------------------------------------------
