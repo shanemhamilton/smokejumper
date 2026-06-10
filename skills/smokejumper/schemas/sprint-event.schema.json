@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shanemhamilton/smokejumper/schemas/sprint-event.schema.json",
+  "title": "SmokeJumper sprint event",
+  "description": "One line of .smokejumper/sprint-log.jsonl. Append-only ledger of sprint actions.",
+  "type": "object",
+  "required": ["ts", "sprint", "phase", "event", "detail"],
+  "properties": {
+    "ts": {
+      "type": "string",
+      "description": "UTC ISO-8601 timestamp (sorts lexically)",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "sprint": {
+      "type": "string",
+      "description": "Sprint identifier, e.g. sprint-2026-06-09"
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["RECON", "DECIDE", "PLAN", "EXECUTE", "REVIEW", "INTEGRATE", "LESSONS", "HANDOFF"]
+    },
+    "event": {
+      "type": "string",
+      "description": "Event name. Core vocabulary: agent_resolved, leads_established, capability_detected, capability_absent, design_posture_set, objective_chosen, gate_review, gate_passed, gate_failed, gate_cleared, lane_check, design_skill_invoked, push_completed, write_back_completed"
+    },
+    "detail": { "type": "string" },
+    "outcome": { "type": "string" },
+    "ref": { "type": "string", "description": "Related identifier: git sha, file path, molecule ID" },
+    "id": { "type": "string", "description": "Evidence-chain event ID (truncated sha256), present on gate events" }
+  },
+  "additionalProperties": false
+}
